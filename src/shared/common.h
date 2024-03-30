@@ -85,7 +85,7 @@ typedef struct {
     } constant;
 
     struct {
-        kptr_t copyin;
+        kptr_t copyin; // Duplicate
         kptr_t copyout;
         kptr_t current_task;
         kptr_t get_bsdtask_info;
@@ -94,8 +94,8 @@ typedef struct {
         kptr_t vnode_lookup;
         kptr_t osunserializexml;
         kptr_t smalloc;
-        kptr_t proc_find;
-        kptr_t proc_rele;
+        kptr_t proc_find; // Not in stage2.m version
+        kptr_t proc_rele; // NOt in stage2.m version
 
         kptr_t ipc_port_alloc_special;
         kptr_t ipc_kobject_set;
@@ -103,7 +103,7 @@ typedef struct {
     } funcs;
 
     struct {
-        kptr_t add_x0_x0_ret;
+        kptr_t add_x0_x0_ret; // Duplicate
     } gadgets;
 
     struct {
@@ -121,10 +121,10 @@ typedef struct {
     } vtabs;
 
     struct {
-        uint32_t is_task_offset;
+        uint32_t is_task_offset; // Duplicate
         uint32_t task_itk_self;
-        uint32_t itk_registered;
-        uint32_t ipr_size;
+        uint32_t itk_registered; // Duplicate
+        uint32_t ipr_size; // Duplicate
         uint32_t sizeof_task;
         uint32_t proc_task;
         uint32_t proc_p_csflags;
@@ -138,6 +138,8 @@ typedef struct {
         uint32_t create_surface;
         uint32_t set_value;
     } iosurface;
+    
+    // Userland funcs is not in our version
 } offsets_t;
 
 typedef volatile struct {

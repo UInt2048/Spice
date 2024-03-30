@@ -56,8 +56,8 @@ $(APP)/jailbreak-resources.deb:
 	echo Copying file to $@
 	cp $(RES)/jailbreak-resources.deb $@
 
-$(APP)/$(TARGET_GUI): $(SRC_GUI)/*.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c | $(APP)
-	$(IGCC) $(ARCH_GUI) -o $@ -Wl,-exported_symbols_list,res/app.txt $(IGCC_FLAGS) $^
+$(APP)/$(TARGET_GUI): $(SRC_GUI)/*.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a $(SRC_CLI)/uland_offsetfinder.m | $(APP)
+	$(IGCC) $(ARCH_GUI) $(UNTETHER_FLAGS) -o $@ -Wl,-exported_symbols_list,res/app.txt $(IGCC_FLAGS) $^
 
 $(APP)/Info.plist: $(RES)/Info.plist | $(APP)
 	sed 's/$$(TARGET)/$(TARGET_GUI)/g;s/$$(PACKAGE)/$(PACKAGE)/g;s/$$(VERSION)/$(VERSION)/g' $(RES)/Info.plist > $@

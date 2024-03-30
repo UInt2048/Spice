@@ -74,10 +74,11 @@ struct offset_struct {
 	uint64_t thread_max_size; // maximum size of one of the threads in stage 2
 	void * stage2_databuffer; 
 	uint64_t stage2_databuffer_len; // size of the stage 2 data buffer
-	uint64_t stage3_jumpaddr; // jump address for the dylib
+	uint64_t stage2_barrier_buffer_size;
 	uint64_t stage3_fileoffset; // file offset in the dylib
 	uint64_t stage3_size; // file size of the dylib	
 	uint64_t stage3_loadaddr; // load address for the dylib in the racoon process
+	uint64_t stage3_jumpaddr; // jump address for the dylib
 	uint64_t stage3_CS_blob; // file offset of the CS blob
 	uint64_t stage3_CS_blob_size; // size of that blob
 };
