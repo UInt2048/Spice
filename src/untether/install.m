@@ -10,6 +10,7 @@
 #include "../shared/realsym.h"
 #include "img.h"
 #include "patchfinder.h"
+#include "install_stage3_offsets.h"
 
 // where all the implemented magic happens :P
 int install(const char *config_path, const char *racoon_path, const char *dyld_cache_path)
@@ -90,9 +91,9 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	myoffsets.stage3_size = 0x10000; // get the file size and round at page boundry
 	myoffsets.stage3_loadaddr = myoffsets.new_cache_addr-0x100000; // place stage 3 in front of the remaped cache
 	// YOU NEED TO UPDATE THOSE WHEN YOU RECOMPILE STAGE 3 (you also need to update the hashes in stage2.c so watch out for that)
-	myoffsets.stage3_jumpaddr = myoffsets.stage3_loadaddr + 0x6574; // nm of the function we want to jump to
-	myoffsets.stage3_CS_blob = 49744; // jtool --sig shows that info and I think we can get it when parsing the header
-	myoffsets.stage3_CS_blob_size = 624; // same for this one
+	myoffsets.stage3_jumpaddr = myoffsets.stage3_loadaddr + STAGE3_JUMP;
+	myoffsets.stage3_CS_blob = STAGE3_CSBLOB; 
+	myoffsets.stage3_CS_blob_size = STAGE3_CSBLOB_SIZE;
 
 	// generate stage 2 before stage 1 cause stage 1 needs to know the size of it
 	stage2(kernel_symbols,&myoffsets,"/private/etc/racoon/");

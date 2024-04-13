@@ -88,7 +88,7 @@ static offsets_t dynamicOffsets(const char *config_path, const char *racoon_path
 
         	.realhost = find_realhost(kernel_symbols), // _host_priv_self -> adrp addr
         	.zone_map = find_zonemap(kernel_symbols), // str 'zone_init: kmem_suballoc failed', first qword above 
-        	.osboolean_true = 0, // OSBoolean::withBoolean -> first adrp addr
+        	.osboolean_true = sym("__ZN9OSBoolean11withBooleanEb"), // OSBoolean::withBoolean -> first adrp addr
         	.trust_cache = find_trustcache(kernel_symbols), // duplicate of trust_chain_head_ptr?
     	},
     	.vtabs = {

