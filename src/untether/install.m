@@ -10,7 +10,7 @@
 #include "../shared/realsym.h"
 #include "img.h"
 #include "patchfinder.h"
-#include "install_stage3_offsets.h"
+#include "generated/install_stage3_offsets.h"
 
 // where all the implemented magic happens :P
 int install(const char *config_path, const char *racoon_path, const char *dyld_cache_path)

@@ -11,8 +11,8 @@
 #include "stage2.h"
 #include "stage1.h"
 
-#include "stage2_hash3.h"
-#include "stage2_hash4.h"
+#include "generated/stage2_hash3.h"
+#include "generated/stage2_hash4.h"
 
 
 // TODO: move that whole buidling part into another file and integrate rop_chain_debug into rop_chain

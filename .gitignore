@@ -5,6 +5,5 @@
 /res/*.mobileprovision
 /tmp.plist
 /trampoline
-/src/untether/stage2bin
-/src/untether/stage3.a
-/src/untether/stage4
+/src/untether/generated
+!/src/untether/generated/.gitignore
