@@ -19,15 +19,15 @@ UNTETHER         = lib$(TARGET_CLI).dylib
 TRAMP            = trampoline
 ICONS           := $(wildcard $(RES)/Icon-*.png)
 FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb
-IGCC            ?= xcrun -sdk iphoneos11.4 gcc -mios-version-min=10.0
-ARCH_GUI        ?= -arch armv7 -arch arm64
-ARCH_CLI        ?= -arch armv7 -arch arm64
+IGCC            ?= $(< src/untether/sdk.txt) clang -mios-version-min=10.0
+ARCH_GUI        ?= -arch "$(< src/untether/arch.txt)"
+ARCH_CLI        ?= -arch "$(< src/untether/arch.txt)"
 IGCC_FLAGS      ?= -Wall -Wformat=0 -flto -Isrc -Iinclude -larchive -fmodules -framework IOKit $(CFLAGS)
 ifdef RELEASE
 IGCC_FLAGS      += -DRELEASE=1
 endif
 UNTETHER_FLAGS  ?= -I$(JAKE)/src -I$(JAKE)/img4lib/libvfs -L$(JAKE) -ljake -L$(JAKE)/img4lib -limg4 -L$(JAKE)/img4lib/lzfse/build/bin -llzfse
-IBTOOL          ?= xcrun -sdk iphoneos11.4 ibtool
+IBTOOL          ?= "$(< src/untether/sdk.txt)" ibtool
 IBTOOL_FLAGS    ?= --output-format human-readable-text --errors --warnings --notices --target-device iphone --target-device ipad $(IBFLAGS)
 SIGN            ?= codesign
 SIGN_FLAGS      ?= -s -

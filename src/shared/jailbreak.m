@@ -115,7 +115,9 @@ static offsets_t dynamicOffsets(const char *config_path, const char *racoon_path
 }
 
 /*
-#if 0
+#define IPAD_5_1_IOS11_1_2 0
+#define IPAD_5_1_IOS11_3_1 0
+#if IPAD_5_1_IOS11_1_2
 offsets_t offs = (offsets_t){
     #ifdef __LP64__
     .constant = {
@@ -173,7 +175,7 @@ offsets_t offs = (offsets_t){
     },
     #endif
 };
-#else
+#elif IPAD_5_1_IOS11_3_1
 offsets_t offs = (offsets_t){
     #ifdef __LP64__
     .constant = {
