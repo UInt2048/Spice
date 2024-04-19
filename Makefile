@@ -1,3 +1,5 @@
+SHELL            = /bin/sh
+
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
@@ -8,6 +10,8 @@ RES              = res
 APP              = $(BIN)/Payload/$(TARGET_GUI).app
 SRC_GUI          = src/app
 SRC_CLI          = src/untether
+NO_UNTETHER     := $(SRC_CLI)/stage3.m $(SRC_CLI)/stage4.m $(SRC_CLI)/generator.m # These are only pre-dependencies
+UNTETHER_SRC    := $(filter-out $(NO_UNTETHER),$(wildcard $(SRC_CLI)/*.m))
 SRC_ALL          = src/shared
 JAKE             = submodules/libjake
 ifdef RELEASE
@@ -19,15 +23,21 @@ UNTETHER         = lib$(TARGET_CLI).dylib
 TRAMP            = trampoline
 ICONS           := $(wildcard $(RES)/Icon-*.png)
 FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb
-IGCC            ?= $(< src/untether/sdk.txt) clang -mios-version-min=10.0
-ARCH_GUI        ?= -arch "$(< src/untether/arch.txt)"
-ARCH_CLI        ?= -arch "$(< src/untether/arch.txt)"
+
+SDK_FILE        := src/untether/sdk.txt
+SDK_RESULT      := $(shell cat ${SDK_FILE})
+ARCH_FILE       := src/untether/arch.txt
+ARCH_RESULT     := $(shell cat ${ARCH_FILE})
+
+IGCC            ?= $(SDK_RESULT) clang -mios-version-min=10.0
+ARCH_GUI        ?= -arch $(ARCH_RESULT)
+ARCH_CLI        ?= -arch $(ARCH_RESULT)
 IGCC_FLAGS      ?= -Wall -Wformat=0 -flto -Isrc -Iinclude -larchive -fmodules -framework IOKit $(CFLAGS)
 ifdef RELEASE
 IGCC_FLAGS      += -DRELEASE=1
 endif
 UNTETHER_FLAGS  ?= -I$(JAKE)/src -I$(JAKE)/img4lib/libvfs -L$(JAKE) -ljake -L$(JAKE)/img4lib -limg4 -L$(JAKE)/img4lib/lzfse/build/bin -llzfse
-IBTOOL          ?= "$(< src/untether/sdk.txt)" ibtool
+IBTOOL          ?= $(SDK_RESULT) ibtool
 IBTOOL_FLAGS    ?= --output-format human-readable-text --errors --warnings --notices --target-device iphone --target-device ipad $(IBFLAGS)
 SIGN            ?= codesign
 SIGN_FLAGS      ?= -s -
@@ -56,6 +66,19 @@ $(APP)/jailbreak-resources.deb:
 	echo Copying file to $@
 	cp $(RES)/jailbreak-resources.deb $@
 
+# TODO: Make more accurate prerequisites
+	
+$(SRC_CLI)/generated/stage2_hash3.h: $(SRC_CLI)/stage3.m
+	bash $(SRC_CLI)/compile_stage3.sh
+	
+$(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h
+	bash $(SRC_CLI)/compile_stage4.sh
+	
+$(SRC_CLI)/stage2.m: $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h
+	bash $(SRC_CLI)/compile_stage2.sh
+	
+$(SRC_CLI)/install.m: $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/install_stage3_offsets.h
+
 $(APP)/$(TARGET_GUI): $(SRC_GUI)/*.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a $(SRC_CLI)/uland_offsetfinder.m | $(APP)
 	$(IGCC) $(ARCH_GUI) $(UNTETHER_FLAGS) -o $@ -Wl,-exported_symbols_list,res/app.txt $(IGCC_FLAGS) $^
 
@@ -74,7 +97,7 @@ $(APP):
 $(APP)/Base.lproj:
 	mkdir -p $@
 
-$(UNTETHER): $(SRC_CLI)/*.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a
+$(UNTETHER): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a
 	$(IGCC) $(ARCH_CLI) $(UNTETHER_FLAGS) -shared -o $@ -Wl,-exported_symbols_list,res/untether.txt $(IGCC_FLAGS) $^
 	$(SIGN) $(SIGN_FLAGS) $@
 
