@@ -9,7 +9,11 @@
 // THE BIG PROBLEM WITH THIS IS THAT IF YOU USE A DAEMON THAT HAS KEEP ALIVE AND YOU HARDCODE THEM THEY MIGHT BE DIFFERENT IN THE FIRST FEW SECONDS OF BOOTING (I believe that this happens because launchd opens some fds later so the number increases)
 // IF YOU CHANGE THESE VALUES HERE AND THEN USE IT IN A KEEP ALIVE DAEMON IT WILL CRASH OVER AND OVER AGAIN CAUSE A SOFTBRICK OF THE SYSTEM SO REALLY WATCH OUT WHEN YOU CHANGE THEM/MAKE SURE THEY ARE SET RIGHT WHEN YOU TEST THIS ON A NEW/DIFFERENT IOS VERSION
 // see stage1.c on when and how they are used (I think STAGE2_FD will always be DYLD_CACHE_FD + 1)
+#if N69_11_3 || N69_11_4
+#define DYLD_CACHE_FD 5
+#elif N41_10_3_3 || J96_11_2_1 || J96_11_3_1
 #define DYLD_CACHE_FD 6
+#endif
 #define STAGE2_FD (DYLD_CACHE_FD+1)
 void generate_stage1_rop_chain(offset_struct_t * offsets);
 void stage1(int fd, offset_struct_t * offsets);

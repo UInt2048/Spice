@@ -43,6 +43,8 @@
     
 // Try to determine offsets_t dynamically
 // We need a better solution because the sandbox isn't going to just give these up
+#if N41_10_3_3
+offsets_t offs;
 static offsets_t dynamicOffsets(const char *config_path, const char *racoon_path, const char *dyld_cache_path) {
 	init_uland_offsetfinder(racoon_path,dyld_cache_path);
 
@@ -73,10 +75,10 @@ static offsets_t dynamicOffsets(const char *config_path, const char *racoon_path
         	.proc_find = sym("_proc_find"), // symbol
         	.proc_rele = sym("_proc_rele"), // symbol 
 
-        	.smalloc = 0xfffffff006b1acb0,
-        	.ipc_port_alloc_special = 0xfffffff0070b9328,
-        	.ipc_kobject_set = 0xfffffff0070cf2c8,
-        	.ipc_port_make_send = 0xfffffff0070b8aa4,
+        	.smalloc = 0xfffffff006b1acb0, // found by searching for "sandbox memory allocation failure"
+        	.ipc_port_alloc_special = 0xfffffff0070b9328, // \"ipc_processor_init\" in processor_start -> call above
+        	.ipc_kobject_set = 0xfffffff0070cf2c8, // above _mach_msg_send_from_kernel_proper
+        	.ipc_port_make_send = 0xfffffff0070b8aa4, // first call in long path of KUNCUserNotificationDisplayFromBundle
     	},
     	.gadgets = {
         	.add_x0_x0_ret = sym("_csblob_get_cdhash"), // gadget 
@@ -89,7 +91,7 @@ static offsets_t dynamicOffsets(const char *config_path, const char *racoon_path
         	.realhost = find_realhost(kernel_symbols), // _host_priv_self -> adrp addr
         	.zone_map = find_zonemap(kernel_symbols), // str 'zone_init: kmem_suballoc failed', first qword above 
         	.osboolean_true = sym("__ZN9OSBoolean11withBooleanEb"), // OSBoolean::withBoolean -> first adrp addr
-        	.trust_cache = find_trustcache(kernel_symbols), // duplicate of trust_chain_head_ptr?
+        	.trust_cache = find_trustcache(kernel_symbols), // %s: trust cache loaded successfully.\n store above (duplicate of trust_chain_head_ptr?)
     	},
     	.vtabs = {
         	.iosurface_root_userclient = 0, // 'iometa -Csov IOSurfaceRootUserClient kernel', vtab=...
@@ -113,11 +115,10 @@ static offsets_t dynamicOffsets(const char *config_path, const char *racoon_path
     	},
 	};
 }
+#endif
 
-/*
-#define IPAD_5_1_IOS11_1_2 0
-#define IPAD_5_1_IOS11_3_1 0
-#if IPAD_5_1_IOS11_1_2
+// iPad mini 4 (Wi-Fi) (iPad5,1), iOS 11.2.1
+#if J96_11_2_1
 offsets_t offs = (offsets_t){
     #ifdef __LP64__
     .constant = {
@@ -175,7 +176,9 @@ offsets_t offs = (offsets_t){
     },
     #endif
 };
-#elif IPAD_5_1_IOS11_3_1
+#endif
+// iPad mini 4 (Wi-Fi) (iPad5,1), iOS 11.3.1
+#if J96_11_3_1
 offsets_t offs = (offsets_t){
     #ifdef __LP64__
     .constant = {
@@ -234,15 +237,134 @@ offsets_t offs = (offsets_t){
     #endif
 };
 #endif
-*/
+// iPhone SE (1st gen) (iPhone8,4), iOS 11.3
+#if N69_11_3
+offsets_t offs = (offsets_t){
+    #ifdef __LP64__
+    .constant = {
+        .kernel_image_base = 0xfffffff007004000, // static
+    },
+    .funcs = {
+        .copyin = 0xFFFFFFF0071A7090, // symbol
+        .copyout = 0xFFFFFFF0071A72B4, // symbol 
+        .current_task = 0xFFFFFFF0070F76C4, // symbol
+        .get_bsdtask_info = 0xFFFFFFF00710CDC0, // symbol 
+        .vm_map_wire_external = 0xFFFFFFF007153484, // symbol
+        .vfs_context_current = 0xFFFFFFF0071F9A04, // symbol
+        .vnode_lookup = 0xFFFFFFF0071DB710, // symbol
+        .osunserializexml = 0xFFFFFFF0074E2404, // symbol (__Z16OSUnserializeXMLPKcPP8OSString)
+        .proc_find = 0xFFFFFFF0073F35B8 , // symbol
+        .proc_rele = 0xFFFFFFF0073F3528, // symbol 
 
-offsets_t offs;
+        .smalloc = 0xFFFFFFF006B5ECB0, // found by searching for "sandbox memory allocation failure"
+        .ipc_port_alloc_special = 0xFFFFFFF0070B915C, // \"ipc_processor_init\" in processor_start -> call above
+        .ipc_kobject_set = 0xFFFFFFF0070CF30C, // above _mach_msg_send_from_kernel_proper
+        .ipc_port_make_send = 0xFFFFFFF0070B88D8, // first call in long path of KUNCUserNotificationDisplayFromBundle
+    },
+    .gadgets = {
+        .add_x0_x0_ret = 0xFFFFFFF0073C96A8, // gadget (or _csblob_get_cdhash)
+    },
+    .data = {
+        .kernel_task = 0xFFFFFFF0075D5048, // symbol 
+        .kern_proc = 0xFFFFFFF0075D50A0, // symbol (kernproc)
+        .rootvnode = 0xFFFFFFF0075D5088, // symbol 
+
+        .realhost = 0xFFFFFFF0075DAB98, // _host_priv_self -> adrp addr
+        .zone_map = 0xFFFFFFF0075F7E50, // str 'zone_init: kmem_suballoc failed', first qword above 
+        .osboolean_true = 0xFFFFFFF007644418, // OSBoolean::withBoolean -> first adrp addr (isn't used anywhere tho)
+        .trust_cache = 0xFFFFFFF0076B0EE8, // %s: trust cache loaded successfully.\n store above
+    },
+    .vtabs = {
+        .iosurface_root_userclient = 0xfffffff006e88c50, // 'iometa -Csov IOSurfaceRootUserClient kernel', vtab=...
+    },
+    .struct_offsets = {
+        .is_task_offset = 0x28,
+        .task_itk_self = 0xd8,
+        .itk_registered = 0x2f0,
+        .ipr_size = 0x8, // ipc_port_request->name->size
+        .sizeof_task = 0x5c8, // size of entire task struct
+        .proc_task = 0x18, // proc->task
+        .proc_p_csflags = 0x2a8, // proc->p_csflags (_cs_restricted, first ldr offset)
+        .task_t_flags = 0x3a0, // task->t_flags
+        .task_all_image_info_addr = 0x3a8, // task->all_image_info_addr (theoretically just +0x8 from t_flags)
+        .task_all_image_info_size = 0x3b0,  // task->all_image_info_size
+    },
+    .iosurface = {
+        .create_outsize = 0xbc8,
+        .create_surface = 0,
+        .set_value = 9,
+    },
+    #endif
+};
+#endif
+// iPhone SE (1st gen) (iPhone8,4), iOS 11.4
+#if N69_11_4
+offsets_t offs = (offsets_t){
+    #ifdef __LP64__
+    .constant = {
+        .kernel_image_base = 0xfffffff007004000, // static
+    },
+    .funcs = {
+        .copyin = 0xFFFFFFF0071A71CC, // symbol
+        .copyout = 0xFFFFFFF0071A73F0, // symbol 
+        .current_task = 0xFFFFFFF0070F4C4C, // symbol
+        .get_bsdtask_info = 0xFFFFFFF00710A348, // symbol 
+        .vm_map_wire_external = 0xFFFFFFF007153574, // symbol
+        .vfs_context_current = 0xFFFFFFF0071F9BCC, // symbol
+        .vnode_lookup = 0xFFFFFFF0071DB8D8, // symbol
+        .osunserializexml = 0xFFFFFFF0074E2A58, // symbol (__Z16OSUnserializeXMLPKcPP8OSString)
+        .proc_find = 0xFFFFFFF0073F3B68, // symbol
+        .proc_rele = 0xFFFFFFF0073F3AD8, // symbol 
+
+        .smalloc = 0xFFFFFFF006B57CB0, // found by searching for "sandbox memory allocation failure" 
+        .ipc_port_alloc_special = 0xFFFFFFF0070B915C, // \"ipc_processor_init\" in processor_start -> call above
+        .ipc_kobject_set = 0xFFFFFFF0070CF30C, // above _mach_msg_send_from_kernel_proper
+        .ipc_port_make_send = 0xFFFFFFF0070B88D8, // first call in long path of KUNCUserNotificationDisplayFromBundle
+    },
+    .gadgets = {
+        .add_x0_x0_ret = 0xFFFFFFF0073C9C58, // gadget (or _csblob_get_cdhash)
+    },
+    .data = {
+        .kernel_task = 0xFFFFFFF0075D9048, // symbol 
+        .kern_proc = 0xFFFFFFF0075D90A0, // symbol (kernproc)
+        .rootvnode = 0xFFFFFFF0075D9088, // symbol 
+
+        .realhost = 0xFFFFFFF0075DEB98, // _host_priv_self -> adrp addr
+        .zone_map = 0xFFFFFFF0075FBE50, // str 'zone_init: kmem_suballoc failed', first qword above 
+        .osboolean_true = 0xFFFFFFF007648428, // OSBoolean::withBoolean -> first adrp addr (isn't used anywhere tho)
+        .trust_cache = 0xFFFFFFF0076B4EE8, // %s: trust cache loaded successfully.\n store above
+    },
+    .vtabs = {
+        .iosurface_root_userclient = 0xfffffff006e88e50, // 'iometa -Csov IOSurfaceRootUserClient kernel', vtab=...
+    },
+    .struct_offsets = {
+        .is_task_offset = 0x28,
+        .task_itk_self = 0xd8,
+        .itk_registered = 0x2f0,
+        .ipr_size = 0x8, // ipc_port_request->name->size
+        .sizeof_task = 0x5c8, // size of entire task struct
+        .proc_task = 0x18, // proc->task
+        .proc_p_csflags = 0x2a8, // proc->p_csflags (_cs_restricted, first ldr offset)
+        .task_t_flags = 0x3a0, // task->t_flags
+        .task_all_image_info_addr = 0x3a8, // task->all_image_info_addr (theoretically just +0x8 from t_flags)
+        .task_all_image_info_size = 0x3b0,  // task->all_image_info_size
+    },
+    .iosurface = {
+        .create_outsize = 0xbc8,
+        .create_surface = 0,
+        .set_value = 9,
+    },
+    #endif
+};
+#endif
+
 task_t kernel_task;
 kptr_t kernel_slide;
 kptr_t kernproc;
 
 kern_return_t jailbreak(uint32_t opt)
 {
+#if N41_10_3_3
 #define CONFIG_PATH "etc/racoon/racoon.conf"
 #define RACOON_PATH "/usr/sbin/racoon"
 #ifdef __LP64__
@@ -252,7 +374,7 @@ kern_return_t jailbreak(uint32_t opt)
 #endif
 
 offs = dynamicOffsets(CONFIG_PATH, RACOON_PATH, DYLD_CACHE_PATH);
-
+#endif
 
     kern_return_t ret = 0;
     task_t self = mach_task_self();

