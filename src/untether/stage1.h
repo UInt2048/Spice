@@ -11,7 +11,7 @@
 // see stage1.c on when and how they are used (I think STAGE2_FD will always be DYLD_CACHE_FD + 1)
 #if N69_11_3 || N69_11_4
 #define DYLD_CACHE_FD 5
-#elif N41_10_3_3 || J96_11_2_1 || J96_11_3_1
+#elif N41_10_3_4 || J96_11_2_1 || J96_11_3_1
 #define DYLD_CACHE_FD 6
 #endif
 #define STAGE2_FD (DYLD_CACHE_FD+1)

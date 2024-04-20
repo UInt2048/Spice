@@ -30,7 +30,7 @@ extern SInt32 CFUserNotificationDisplayAlert(
 
 // Used in jailbreak.m
 // There's another version of this used in stage1.h and install.m
-#define N41_10_3_3 1
+#define N41_10_3_4 1
 #define N69_11_3 0
 #define N69_11_4 0
 #define J96_11_2_1 0
