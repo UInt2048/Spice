@@ -50,20 +50,20 @@ static offsets_t dynamicOffsets(const char *config_path, const char *racoon_path
         	.realhost = find_realhost(kernel_symbols), // _host_priv_self -> adrp addr
         	.zone_map = find_zonemap(kernel_symbols), // str 'zone_init: kmem_suballoc failed', first qword above 
         	.osboolean_true = sym("__ZN9OSBoolean11withBooleanEb"), // OSBoolean::withBoolean -> first adrp addr
-        	.trust_cache = find_trustcache(kernel_symbols), // %s: trust cache loaded successfully.\n store above (duplicate of trust_chain_head_ptr?)
+        	.trust_cache = find_trustcache(kernel_symbols), // "%s: trust cache loaded successfully.\n store above", duplicate
     	},
     	.vtabs = {
         	.iosurface_root_userclient = 0xfffffff006e73590, // 'iometa -Csov IOSurfaceRootUserClient kernel', vtab=...
     	},
     	.struct_offsets = {
         	.is_task_offset = 0x28, // duplicate
-        	.task_itk_self = 0xd8,
+        	.task_itk_self = 0xd8, // first reference of ipc_task_reset, offset after _lck_mtx_lock
         	.itk_registered = 0x2f0, // duplicate
         	.ipr_size = 8, // duplicate, ipc_port_request->name->size
         	.sizeof_task = 0x5c8, // size of entire task struct
         	.proc_task = 0x18, // proc->task
         	.proc_p_csflags = 0x2a8, // proc->p_csflags (_cs_restricted, first ldr offset)
-        	.task_t_flags = 0x3a0, // task->t_flags, not set in untether version
+        	.task_t_flags = 0x3a0, // task->t_flags, not set in untether version (IOUserClient::clientHasPrivilege, function call after current_task)
         	.task_all_image_info_addr = 0x3a8, // task->all_image_info_addr (theoretically just +0x8 from t_flags)
         	.task_all_image_info_size = 0x3b0,  // task->all_image_info_size
    		},
@@ -115,22 +115,20 @@ offsets_t offs = (offsets_t){
     },
     .struct_offsets = {
     	//.is_task_offset = 0x28,
-        //.task_itk_self = 0xd8,
+        .task_itk_self = 0x9c, // first reference of ipc_task_reset, offset after _lck_mtx_lock
         //.itk_registered = 0x2f0,
         //.ipr_size = 0x8, // ipc_port_request->name->size
         //.sizeof_task = 0x5c8, // size of entire task struct
         //.proc_task = 0x18, // proc->task
         .proc_p_csflags = 0x1b8, // proc->p_csflags (_cs_restricted, first ldr offset)
-        //.task_t_flags = 0x3a0, // task->t_flags
-        //.task_all_image_info_addr = 0x3a8, // task->all_image_info_addr (theoretically just +0x8 from t_flags)
-        //.task_all_image_info_size = 0x3b0,  // task->all_image_info_size
+        .task_t_flags = 0x248, // task->t_flags (IOUserClient::clientHasPrivilege, function call after current_task)
+        .task_all_image_info_addr = 0x250, // ("created task is not a member of a resource coalition", search 0x5f) task->all_image_info_addr (theoretically just +0x8 from t_flags)
+        .task_all_image_info_size = 0x258,  // ("created task is not a member of a resource coalition", search 0x5f) task->all_image_info_size
     },
     .iosurface = {
-	/*
-        .create_outsize = 0xbc8,
-        .create_surface = 0,
-        .set_value = 9,
-    */
+        //.create_outsize = 0xbc8, 
+        .create_surface = 0, // static, IOSurfaceCreate is method 0 of IOSurfaceRootUserClient
+        .set_value = 9, // static, IOSurfaceSetValue is method 9 of IOSurfaceRootUserClient
     },
 };
 #endif
@@ -291,7 +289,7 @@ offsets_t offs = (offsets_t){
     },
     .struct_offsets = {
         .is_task_offset = 0x28,
-        .task_itk_self = 0xd8,
+        .task_itk_self = 0xe0, // first reference of ipc_task_reset, offset after _lck_mtx_lock
         .itk_registered = 0x2f0,
         .ipr_size = 0x8, // ipc_port_request->name->size
         .sizeof_task = 0x5c8, // size of entire task struct
