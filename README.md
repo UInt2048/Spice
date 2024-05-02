@@ -2,8 +2,7 @@
 
 ## Basic overview
 This was written by the @JakeBlair420 team (@s1guza, @stek29, @sparkey, @littlelailo)
-There is a presentation from @littlelailo he gave at 36C3 that gives a pretty good overview over the whole jailbreak including the bugs that were used and how we exploited them.
-So please watch this first before looking at the code base to get a good overview.
+There is a [presentation](https://media.ccc.de/v/36c3-11034-tales_of_old_untethering_ios_11) from @littlelailo he gave at 36C3 that gives a pretty good overview over the whole jailbreak including the bugs that were used and how we exploited them, so please watch this first before looking at the code base to get a good overview.
 The bugs can be used to exploit this on all versions of iOS 11, in theory it's also possible to pop the i5 on some versions of iOS 10 with this, but the repo and spice only support 64 bit devices.
 The jailbreak is in an incomplete state atm and only works on none SMAP devices (A7-A9) and with hardcoded symbols (but the offsetfinders are also nearly done).
 We added comments as much as possible to explain what still doesn't work/needs more testing if someone wants to port this to other devices.
@@ -76,7 +75,7 @@ timer { // now we can use this timer statment
 }
 ```
 If the explanation in text form wasn't enough for you please look at the slides/presentation of both littlelailo and pod2g that have a graphic visualization of the bug.
-The bug was "fixed" by Apple in 2012 as CVE-2012-3727 but fixed the bug in the wrong function (dns4 one) so this is still an 0day at the moment.
+The bug was "fixed" by Apple in 2012 in iOS 6 as CVE-2012-3727 but fixed the bug in the wrong function (dns4 one) so this bug was not patched until iOS 13.3.1 as CVE-2020-3840.
 
 ### ASLR bypass
 The aslr bypass is pretty complex to explain but basically there is the dyld shared cache containing all the libraries from apple that gets loaded into each process.
@@ -155,3 +154,12 @@ If you still can't boot after that you basically softbricked sry.
 - presentation from panicall: https://i.blackhat.com/eu-18/Wed-Dec-5/eu-18-Juwei_Lin-Drill-The-Apple-Core.pdf
 - presentation from pod2g https://papers.put.as/papers/ios/2012/pod2g-jailbreak-techniques-wwjc-2012.pdf and https://conference.hitb.org/hitbsecconf2012ams/materials/D2T2%20-%20Jailbreak%20Dream%20Team%20-%20Corona%20Jailbreak%20for%20iOS%205.0.1.pdf
 - acron: https://github.com/xerub/acorn
+
+## Credits
+- JakeBlair420 team for the actual jailbreak
+- Apple for XNU source and leaving CVE-2020-3840 in iOS for years (since iPhoneOS 1.0 if you believe the NVD entry for CVE-2012-3727)
+- National Security Agency for [Ghidra](https://github.com/NationalSecurityAgency/ghidra)
+- planetbeing et al. for [xpwn](https://github.com/planetbeing/xpwn) (specifically xpwntool to decompress the iOS 10 kernel cache)
+- PrimePlatypus, LukeZGD, cxdxn1 for explaining that xpwntool exists and how to use it
+- blacktop for the [ipsw](https://github.com/blacktop/ipsw) tool (to decompress the iOS 11 kernel cache)
+- Jonathan Levin for jtool (version 1, download [here](https://www.newosxbook.com/tools/jtool.tar))
