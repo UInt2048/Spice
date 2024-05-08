@@ -25,8 +25,61 @@
 #include "../untether/uland_offsetfinder.h"
 #include "patchfinder.h"
 
-// This include sets a global variable offs of type offsets_t
 #include "jboffsets.h"
+
+offsets_t offs = (offsets_t){
+    .constant = {
+        .kernel_image_base = OFF_KERNEL_IMAGE_BASE, // static
+    },
+    .funcs = {
+        .copyin = OFF_COPYIN, // symbol
+        .copyout = OFF_COPYOUT, // symbol 
+        .current_task = OFF_CURRENT_TASK, // symbol
+        .get_bsdtask_info = OFF_GET_BSDTASK_INFO, // symbol 
+        .vm_map_wire_external = OFF_VM_MAP_WIRE_EXTERNAL, // symbol
+        .vfs_context_current = OFF_VFS_CONTEXT_CURRENT, // symbol
+        .vnode_lookup = OFF_VNODE_LOOKUP, // symbol
+        .osunserializexml = OFF_OSUNSERIALIZEXML, // symbol (__Z16OSUnserializeXMLPKcPP8OSString)
+        .proc_find = OFF_PROC_FIND, // symbol
+        .proc_rele = OFF_PROC_RELE, // symbol 
+        .smalloc = OFF_SMALLOC, // found by searching for "sandbox memory allocation failure"
+        .ipc_port_alloc_special = OFF_IPC_PORT_ALLOC_SPECIAL, // \"ipc_processor_init\" in processor_start -> call above
+        .ipc_kobject_set = OFF_IPC_KOBJECT_SET, // above _mach_msg_send_from_kernel_proper (2nd above for 10.3.4)
+        .ipc_port_make_send = OFF_IPC_PORT_MAKE_SEND, // first call in long path of KUNCUserNotificationDisplayFromBundle
+    },
+    .gadgets = {    
+        .add_x0_x0_ret = OFF_ADD_X0_X0_RET, // gadget (or _csblob_get_cdhash)
+    },
+    .data = {
+        .kernel_task = OFF_KERNEL_TASK, // symbol 
+        .kern_proc = OFF_KERN_PROC, // symbol (kernproc)
+        .rootvnode = OFF_ROOTVNODE, // symbol 
+        .realhost = OFF_REALHOST, // _host_priv_self -> adrp addr
+        .zone_map = OFF_ZONE_MAP, // str 'zone_init: kmem_suballoc failed', first qword above 
+        .osboolean_true = OFF_OSBOOLEAN_TRUE, // OSBoolean::withBoolean -> first adrp addr (isn't used anywhere tho)
+        .trust_cache = OFF_TRUST_CACHE, // (on iOS 10.3.4, use "%s: trust cache already loaded with matching UUID, ignoring\n", store below call to _lck_mtx_lock in same function) "%s: trust cache loaded successfully.\n" store above
+    },
+    .vtabs = {
+        .iosurface_root_userclient = OFF_IOSURFACE_ROOT_USERCLIENT, // (on iOS 10.3.4, search "IOSurfaceRootUserClient", store in function below first reference) 'iometa -Csov IOSurfaceRootUserClient kernel', vtab=...
+    },
+    .struct_offsets = {
+    	.is_task_offset = OFF_IS_TASK, // "ipc_task_init", lower of two final offsets to a local variable in decompiled code
+        .task_itk_self = OFF_TASK_ITK_SELF, // first reference of ipc_task_reset, offset after _lck_mtx_lock
+        .itk_registered = OFF_ITK_REGISTERED, // "ipc_task_init", first comparison below to parameter, first str offset in not zero branch
+        .ipr_size = OFF_IPR_SIZE, // "ipc_object_copyout_dest: strange rights", offset of second ldr in function below (long path: search all instances of 0x10000003 to find _kernel_rpc_mach_port_construct_trap, needs to have a copyin call, and travel chain)
+        .sizeof_task = OFF_SIZEOF_TASK, // str "tasks", mov offset below
+        .proc_task = OFF_PROC_TASK, // "PMTellAppWithResponse - Suspended", second offset above
+        .proc_p_csflags = OFF_PROC_P_CSFLAGS, // proc->p_csflags (_cs_restricted, first ldr offset)
+        .task_t_flags = OFF_TASK_T_FLAGS, // task->t_flags (IOUserClient::clientHasPrivilege, function call after current_task)
+        .task_all_image_info_addr = OFF_TASK_ALL_IMAGE_INFO_ADDR, // ("created task is not a member of a resource coalition", search 0x5f) task->all_image_info_addr (theoretically just +0x8 from t_flags)
+        .task_all_image_info_size = OFF_TASK_ALL_IMAGE_INFO_SIZE,  // ("created task is not a member of a resource coalition", search 0x5f) task->all_image_info_size
+    },
+    .iosurface = {
+        .create_outsize = OFF_CREATE_OUTSIZE, // TODO: prove this
+        .create_surface = OFF_CREATE_SURFACE, // static, IOSurfaceCreate is method 0 of IOSurfaceRootUserClient
+        .set_value = OFF_SET_VALUE, // static, IOSurfaceSetValue is method 9 of IOSurfaceRootUserClient
+    },
+};
 
 #define MACH(func)\
     ret = func;\

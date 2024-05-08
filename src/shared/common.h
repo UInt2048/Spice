@@ -33,6 +33,7 @@ extern SInt32 CFUserNotificationDisplayAlert(
 #define N41_10_3_4 1
 #define N69_11_3 0
 #define N69_11_4 0
+#define N71_11_3_1 0
 #define J96_11_2_1 0
 #define J96_11_3_1 0
 
