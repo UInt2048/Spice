@@ -16,6 +16,7 @@
 // where all the implemented magic happens :P
 int install(const char *config_path, const char *racoon_path, const char *dyld_cache_path)
 {
+#if J96_11_3_1
 #define KERNEL_CACHE_PATH "/System/Library/Caches/com.apple.kernelcaches/kernelcache"
 	// this basically just initalizes the myoffsets structure. THis is the only part that prevent the jailbreak from working on all devices/versions because the offsetfinders (I think mainly the kernel one) is still broken
 	// so in theory you could also remove all the offsetfinders and just get the symbols by hand
@@ -79,7 +80,7 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	myoffsets.itk_registered = 0x2f0; // offset of the itk registered field
 	myoffsets.is_task = 0x28; // offset of the is_task field
 	
-#if N41_10_3_4 || N69_11_3 || N69_11_4
+#else
     jake_img_t kernel_symbols; // dummy
 	offset_struct_t myoffsets;
     // adr @ 0x100067c10

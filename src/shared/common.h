@@ -28,14 +28,7 @@ extern SInt32 CFUserNotificationDisplayAlert(
     typedef uint32_t kptr_t;
 #endif
 
-// Used in jailbreak.m
-// There's another version of this used in stage1.h and install.m
-#define N41_10_3_4 1
-#define N69_11_3 0
-#define N69_11_4 0
-#define N71_11_3_1 0
-#define J96_11_2_1 0
-#define J96_11_3_1 0
+#include "jboffsets.h"
 
 #include "offsets.h"
 
