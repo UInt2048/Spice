@@ -47,7 +47,7 @@ bool hasJailbroken = false;
     
     titleLabel = [UILabel new];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    titleLabel.text = @"An iOS 10.3.4 untether";
+    titleLabel.text = @"First untether-upgradable iOS 11 jailbreak";
     [titleLabel setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
     titleLabel.font = [UIFont systemFontOfSize:14];
 

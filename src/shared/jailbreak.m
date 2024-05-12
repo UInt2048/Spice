@@ -22,10 +22,23 @@
 #include "ArchiveFile.h"
 
 #include "jailbreak.h"
-#include "../untether/uland_offsetfinder.h"
-#include "patchfinder.h"
-
 #include "jboffsets.h"
+
+#define MACH(func)\
+    ret = func;\
+    if (ret != KERN_SUCCESS)\
+    {\
+        LOG(#func " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret));\
+        goto out;\
+    }
+
+#define VAL_CHECK(value)\
+    if ((value) == 0x0)\
+    {\
+        LOG("(ln.%d)failed to find " #value "!", __LINE__);\
+        ret = KERN_FAILURE;\
+        goto out;\
+    }
 
 offsets_t offs = (offsets_t){
     .constant = {
@@ -47,7 +60,7 @@ offsets_t offs = (offsets_t){
         .ipc_kobject_set = OFF_IPC_KOBJECT_SET, // above _mach_msg_send_from_kernel_proper (2nd above for 10.3.4)
         .ipc_port_make_send = OFF_IPC_PORT_MAKE_SEND, // first call in long path of KUNCUserNotificationDisplayFromBundle
     },
-    .gadgets = {    
+    .gadgets = {
         .add_x0_x0_ret = OFF_ADD_X0_X0_RET, // gadget (or _csblob_get_cdhash)
     },
     .data = {
@@ -63,7 +76,7 @@ offsets_t offs = (offsets_t){
         .iosurface_root_userclient = OFF_IOSURFACE_ROOT_USERCLIENT, // (on iOS 10.3.4, search "IOSurfaceRootUserClient", store in function below first reference) 'iometa -Csov IOSurfaceRootUserClient kernel', vtab=...
     },
     .struct_offsets = {
-    	.is_task_offset = OFF_IS_TASK, // "ipc_task_init", lower of two final offsets to a local variable in decompiled code
+        .is_task_offset = OFF_IS_TASK, // "ipc_task_init", lower of two final offsets to a local variable in decompiled code
         .task_itk_self = OFF_TASK_ITK_SELF, // first reference of ipc_task_reset, offset after _lck_mtx_lock
         .itk_registered = OFF_ITK_REGISTERED, // "ipc_task_init", first comparison below to parameter, first str offset in not zero branch
         .ipr_size = OFF_IPR_SIZE, // "ipc_object_copyout_dest: strange rights", offset of second ldr in function below (long path: search all instances of 0x10000003 to find _kernel_rpc_mach_port_construct_trap, needs to have a copyin call, and travel chain)
@@ -81,40 +94,12 @@ offsets_t offs = (offsets_t){
     },
 };
 
-#define MACH(func)\
-    ret = func;\
-    if (ret != KERN_SUCCESS)\
-    {\
-        LOG(#func " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret));\
-        goto out;\
-    }
-
-#define VAL_CHECK(value)\
-    if ((value) == 0x0)\
-    {\
-        LOG("(ln.%d)failed to find " #value "!", __LINE__);\
-        ret = KERN_FAILURE;\
-        goto out;\
-    }
-
 task_t kernel_task;
 kptr_t kernel_slide;
 kptr_t kernproc;
 
 kern_return_t jailbreak(uint32_t opt)
 {
-#if 0
-#define CONFIG_PATH "etc/racoon/racoon.conf"
-#define RACOON_PATH "/usr/sbin/racoon"
-#ifdef __LP64__
-#define DYLD_CACHE_PATH "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64"
-#else
-#define DYLD_CACHE_PATH "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7s"
-#endif
-
-offs = dynamicOffsets(CONFIG_PATH, RACOON_PATH, DYLD_CACHE_PATH);
-#endif
-
     kern_return_t ret = 0;
     task_t self = mach_task_self();
     kptr_t kbase = 0;

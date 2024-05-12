@@ -6,7 +6,7 @@
 
 // used to catch all signals
 void sighandler(int signo) {
-	LOG("received signal: %d",signo);
+	LOG("Stage 4 received signal: %d",signo);
 }
 
 int main() {

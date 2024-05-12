@@ -97,7 +97,7 @@ typedef struct {
         kptr_t osunserializexml;
         kptr_t smalloc;
         kptr_t proc_find; // Not in stage2.m version
-        kptr_t proc_rele; // NOt in stage2.m version
+        kptr_t proc_rele; // Not in stage2.m version
 
         kptr_t ipc_port_alloc_special;
         kptr_t ipc_kobject_set;

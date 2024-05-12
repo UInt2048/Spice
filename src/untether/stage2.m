@@ -1357,7 +1357,6 @@ _STRUCT_ARM_THREAD_STATE64
 	offsets_t * lib_offsets = malloc(sizeof(offsets_t));
 	memset(lib_offsets,0,sizeof(offsets_t));
 	lib_offsets->constant.kernel_image_base = OFF_KERNEL_IMAGE_BASE;
-#define sym(name) jake_find_symbol(kernel_symbols,name)
 	lib_offsets->funcs.copyin = OFF_COPYIN;
 	lib_offsets->funcs.copyout = OFF_COPYOUT;
 	lib_offsets->funcs.current_task = OFF_CURRENT_TASK;
@@ -1388,18 +1387,18 @@ _STRUCT_ARM_THREAD_STATE64
 	lib_offsets->struct_offsets.task_all_image_info_size = OFF_TASK_ALL_IMAGE_INFO_SIZE;
 	// iosurface stuff isn't set and also isn't used
 	#if N71_11_3_1
-	lib_offsets->userland_funcs.write = OFF_WRITE;
-	lib_offsets->userland_funcs.IOConnectTrap6 = OFF_IOCONNECTTRAP6;
-	lib_offsets->userland_funcs.mach_ports_lookup = OFF_MACH_PORTS_LOOKUP;
-	lib_offsets->userland_funcs.mach_task_self = OFF_MACH_TASK_SELF;
-	lib_offsets->userland_funcs.mach_vm_remap = OFF_MACH_VM_REMAP;
-	lib_offsets->userland_funcs.mach_port_destroy = OFF_MACH_PORT_DESTROY;
-	lib_offsets->userland_funcs.mach_port_deallocate = OFF_MACH_PORT_DEALLOCATE;
-	lib_offsets->userland_funcs.mach_port_allocate = OFF_MACH_PORT_ALLOCATE;
-	lib_offsets->userland_funcs.mach_port_insert_right = OFF_MACH_PORT_INSERT_RIGHT;
-	lib_offsets->userland_funcs.mach_ports_register = OFF_MACH_PORTS_REGISTER;
-	lib_offsets->userland_funcs.mach_msg = OFF_MACH_MSG;
-	lib_offsets->userland_funcs.posix_spawn = OFF_POSIX_SPAWN;
+	lib_offsets->userland_funcs.write = (void*)(OFF_WRITE);
+	lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(OFF_IOCONNECTTRAP6);
+	lib_offsets->userland_funcs.mach_ports_lookup = (void*)(OFF_MACH_PORTS_LOOKUP);
+	lib_offsets->userland_funcs.mach_task_self = (void*)(OFF_MACH_TASK_SELF);
+	lib_offsets->userland_funcs.mach_vm_remap = (void*)(OFF_MACH_VM_REMAP);
+	lib_offsets->userland_funcs.mach_port_destroy = (void*)(OFF_MACH_PORT_DESTROY);
+	lib_offsets->userland_funcs.mach_port_deallocate = (void*)(OFF_MACH_PORT_DEALLOCATE);
+	lib_offsets->userland_funcs.mach_port_allocate = (void*)(OFF_MACH_PORT_ALLOCATE);
+	lib_offsets->userland_funcs.mach_port_insert_right = (void*)(OFF_MACH_PORT_INSERT_RIGHT);
+	lib_offsets->userland_funcs.mach_ports_register = (void*)(OFF_MACH_PORTS_REGISTER);
+	lib_offsets->userland_funcs.mach_msg = (void*)(OFF_MACH_MSG);
+	lib_offsets->userland_funcs.posix_spawn = (void*)(OFF_POSIX_SPAWN);
 	#else
 	lib_offsets->userland_funcs.write = (void*)(get_addr_from_name(offsets,"write") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(get_addr_from_name(offsets,"IOConnectTrap6") - 0x180000000 + offsets->new_cache_addr);

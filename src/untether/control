@@ -1,0 +1,9 @@
+Package: lol.spyware.spiceuntether
+Name: Spice Untether Payload
+Version: 1.0.160
+Architecture: iphoneos-arm
+Description: Upgrades the Spice jailbreak to untethered
+Maintainer: UInt2048
+Author: JakeBlair420
+Section: System
+Depends: firmware (>= 11.0), firmware (<= 11.4.1)

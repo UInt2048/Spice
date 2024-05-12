@@ -130,21 +130,40 @@ So we just use swapprefix sysctl and the cool thing about this is that it's a st
 We can use this to put our fake port at a known address and both new trustcache entries.
 
 ## Installation
-For compilation of stage 2-4, use the shell scripts in the untether folder, the makefile only works for the app.
-For the installation, copy stage 2 onto the device into some random folder and stage 3 (/usr/sbin/racoon.dylib) and 4 (/mystuff/stage4) at their right paths.
-Create the folder /var/run/racoon and run stage 2 (note: stage 1 expects stage 2 at /private/etc/racoon/stg2).
-Then execute racoon till it doesn't kernel panic anymore to make sure you got the right offsets.
-Then also set the nvram variable boot-args to "`__developer_mode_enabled`" and check if the system keeps running stable even with racoon (this is the killswitch).
-If you did you can then go for the real untether by replacing one of the launch daemons and unsetting the variable to run the untether on the next boot.
-There you need to watch out for three things:
+Obviously, just run `make` to create all generated files (the makefile requires macOS, use a VM or something if you need it).
+
+The app is a *semi-untethered jailbreak*. The app will not install the untether payload.
+
+If you have an issue upgrading essential packages, run `apt --fix-broken install file libplist3 libssl1.1.1` then `apt install -f dpkg ldid -o APT::Immediate-Configure=0` over an SSH connection.
+
+To install the untether payload (these files are located in ./src/untether/generated):
+1. Install the DEB file (use `make payload` if you can't find it) or manually copy the stage 1-2 install script to `/private/etc/racoon/install_stage1_2`, stage 3 to `/usr/sbin/racoon.dylib`, and stage 4 to `/mystuff/stage4`.
+2. Type `/private/etc/racoon/install_stage1_2` in a terminal or SSH connection. This will create the folder `/var/run/racoon` if it does not yet exist.
+There will be a lot of output. If successful, the end looks something like:
+```
+0x1f0214e60: 0x00000000 (NOP)
+0x1f0214e68: 0x1e1639494 (code address org:1a1639494) Beast gadget (x30)
+=
+===
+2024-05-11 05:47:33.135 install_stage1_2[4321:134320] Chain will be at: 1afe90d30
+2024-05-11 05:47:33.141 install_stage1_2[4321:134320] 4610 iterations
+```
+3. Then execute racoon (the real one in PATH, should be `/usr/sbin/racoon`) till it doesn't kernel panic anymore to make sure you got the right offsets.
+If you get a segfault, and the crash report shows the beast gadget offset listed in your output, you likely need to set `STAGE1FD_SCREAM_TEST` to find the right stage 1 fd in the crash log.
+4. Then also set the nvram variable boot-args to "`__developer_mode_enabled`" and check if the system keeps running stable even with racoon (this is the killswitch).
+5. If you did you can then go for the real untether by replacing one of the launch daemons and unsetting the killswitch to run the untether on the next boot.
+
+There, you need to watch out for three things:
 - the launch daemon isn't used by anything important (namely springboard) (otherwise you will softbrick when it fails to run)
 - the launch daemon doesn't have keepalive set (if it does launchd will try to always restart it if you crash it and that will also softbrick)
 - the launch daemon starts up early
+
 We found out that you can safely replace prdaily but this one will start really late during boot so you get the same behaviour we also showed in febuary in the demo.
 You can also replace wifiFirmwareLoaderLegacy, but this one has keepalive set so you might softbrick. The big advantage you get tho is speed because it starts really early.
-After you chose your daemon you need to update jailbreak.m to unload the right one (currently unloads prdaily) and recompile stage 4/replace it on disk again.
-As a last step please run sync a few times to make sure that everything got written to disk and then fingers crossed it works and you don't softbrick.
-If you restart and it keeps kernel panicing boot into recovery and set the boot-args to "`__developer_mode_enabled`" using irecovery and then reboot this will disable stage 2/the kernel exploit.
+
+If you choose something other than prdaily, you need to update jailbreak.m to unload the right one (currently unloads prdaily) and recompile stage 4/replace it on disk again.
+As a last step, please run sync a few times to make sure that everything got written to disk and then fingers crossed it works and you don't softbrick.
+If you restart and it keeps kernel panicing, boot into recovery and set the boot-args to "`__developer_mode_enabled`" using irecovery and then reboot this will disable stage 2/the kernel exploit.
 If you still can't boot after that you basically softbricked sry.
 
 ## References
