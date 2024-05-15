@@ -138,7 +138,7 @@ If you have an issue upgrading essential packages, run `apt --fix-broken install
 
 To install the untether payload (these files are located in ./src/untether/generated):
 1. Install the DEB file (use `make payload` if you can't find it) or manually copy the stage 1-2 install script to `/private/etc/racoon/install_stage1_2`, stage 3 to `/usr/sbin/racoon.dylib`, and stage 4 to `/mystuff/stage4`.
-2. Type `/private/etc/racoon/install_stage1_2` in a terminal or SSH connection. This will create the folder `/var/run/racoon` if it does not yet exist.
+2. If installing manually, type `/private/etc/racoon/install_stage1_2` in a terminal or SSH connection. This will create the folder `/var/run/racoon` if it does not yet exist.
 There will be a lot of output. If successful, the end looks something like:
 ```
 0x1f0214e60: 0x00000000 (NOP)
@@ -148,8 +148,42 @@ There will be a lot of output. If successful, the end looks something like:
 2024-05-11 05:47:33.135 install_stage1_2[4321:134320] Chain will be at: 1afe90d30
 2024-05-11 05:47:33.141 install_stage1_2[4321:134320] 4610 iterations
 ```
+
+If you're running the DEB in Zebra, the last two lines might be replaced with "Finished!".
+
 3. Then execute racoon (the real one in PATH, should be `/usr/sbin/racoon`) till it doesn't kernel panic anymore to make sure you got the right offsets.
 If you get a segfault, and the crash report shows the beast gadget offset listed in your output, you likely need to set `STAGE1FD_SCREAM_TEST` to find the right stage 1 fd in the crash log.
+If successful, the end looks something like:
+
+```
+2024-05-16 00:52:58.174 stage4[597:8713] [jailbreak] generator is set to: 0x1111111111111111
+2024-05-16 00:52:58.174 stage4[597:8713] [jailbreak] task_info ret: 0 ((os/kern) successful)
+2024-05-16 00:52:58.175 stage4[597:8713] [jailbreak] all_image_info_addr: fffffff00f404000
+2024-05-16 00:52:58.175 stage4[597:8713] [jailbreak] all_image_info_size: 8400000
+2024-05-16 00:52:58.176 stage4[597:8713] [jailbreak] bundle path: /mystuff
+2024-05-16 00:52:58.176 stage4[597:8713] [jailbreak] JBOPT_POST_ONLY mode and bootstrap is present, all is well
+2024-05-16 00:52:58.176 stage4[597:8713] [jailbreak] JBOPT_POST_ONLY mode and unrestrict is present, all is well
+2024-05-16 00:52:58.181 stage4[597:8713] [jailbreak] wrote offsets.plist
+```
+
+If you provide a control-C signal, it will either kernel panic or you might respring and receive more output ending in something like:
+
+```
+2024-05-16 01:06:53.425 stage4[597:8713] [jailbreak] finished post exploitation
+2024-05-16 01:06:53.425 stage4[597:8713] [jailbreak] unloading prdaily...
+2024-05-16 01:06:53.436 stage4[597:8713] [sighandler] Stage 4 received signal: 20
+2024-05-16 01:06:53.436 stage4[597:8713] [execprog] contents of /tmp/exec_logs/1715789213:
+2024-05-16 01:06:53.437 stage4[597:8713] [jailbreak] prdaily unloaded
+
+iPhone:~ root# 2024-05-16 01:07:18.920 stage4[597:8713] [sighandler] Stage 4 received signal: 20
+2024-05-16 01:07:18.920 stage4[597:8713] [execprog] contents of /tmp/exec_logs/1715789213:
+2024-05-16 01:07:19.061 stage4[597:8713] [jailbreak] Restoring to mobile and exiting.
+2024-05-16 01:07:19.062 stage4[597:8713] [restore_to_mobile] got ourproc at ffffffe0016cd860
+2024-05-16 01:07:19.062 stage4[597:8713] [restore_to_mobile] our uid is now 501
+```
+
+Another control-C after this will restore control of the SSH connection.
+
 4. Then also set the nvram variable boot-args to "`__developer_mode_enabled`" and check if the system keeps running stable even with racoon (this is the killswitch).
 5. If you did you can then go for the real untether by replacing one of the launch daemons and unsetting the killswitch to run the untether on the next boot.
 

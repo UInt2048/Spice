@@ -136,7 +136,7 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	myoffsets.stage2_databuffer_len = 0x10000; // Moved from stage2.m
 	myoffsets.stage2_barrier_buffer_size = 0x10000; // Moved from stage2.m
 	myoffsets.stage3_fileoffset = 0; // at which place in the file (dylib) stage 3 (the code section) starts
-	myoffsets.stage3_size = 0x10000; // get the file size and round at page boundary
+	myoffsets.stage3_size = 0x10000; // get the file size and round at page boundary (should be between 0x14000 and 0x18000 bytes)
 	myoffsets.stage3_loadaddr = myoffsets.new_cache_addr-0x100000; // place stage 3 in front of the remaped cache
 
 	// This has to update any time stage 3 is recompiled

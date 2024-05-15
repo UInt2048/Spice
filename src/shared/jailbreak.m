@@ -98,7 +98,7 @@ task_t kernel_task;
 kptr_t kernel_slide;
 kptr_t kernproc;
 
-kern_return_t jailbreak(uint32_t opt)
+kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, NSString*))
 {
     kern_return_t ret = 0;
     task_t self = mach_task_self();
@@ -117,11 +117,11 @@ kern_return_t jailbreak(uint32_t opt)
     }
     else
     {
-        suspend_all_threads();
+        //suspend_all_threads();
 
-        ret = pwn_kernel(offs, &kernel_task, &kbase);
+        ret = pwn_kernel(offs, &kernel_task, &kbase, controller, sendLog);
 
-        resume_all_threads();
+        //resume_all_threads();
             
         if(ret != KERN_SUCCESS) goto out;
 
@@ -191,9 +191,8 @@ kern_return_t jailbreak(uint32_t opt)
         MACH(unlock_nvram());
         LOG("patched nvram successfully");
 
-        // set generator 
-        // TODO: set this to 0x0
-        MACH(set_generator("0xcb95ce776496b54f"));
+        // set generator
+        MACH(set_generator("0x1111111111111111"));
 
         const char *current_gen = get_generator();
         LOG("generator is set to: %s", current_gen);
@@ -599,7 +598,7 @@ kern_return_t jailbreak(uint32_t opt)
 
             LOG("prdaily unloaded\n");
 
-            /* hope substrateis running byu this point? */
+            /* hope substrate is running by this point? */
 
             if (access("/usr/bin/ldrestart", F_OK) != 0)
             {
@@ -620,7 +619,8 @@ kern_return_t jailbreak(uint32_t opt)
     
     ret = KERN_SUCCESS;
 
-out:;
+out:
+	LOG("Restoring to mobile and exiting.");
     restore_to_mobile();
 
     term_kexecute();

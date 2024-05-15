@@ -28,6 +28,9 @@ __attribute__((constructor)) static void dylib_main(void)
     // - execve trampoline
 }
 
+// Do nothing when we move to the next stage
+void sendLog(void* controller, NSString* log) {}
+
 int main(int argc, const char **argv)
 {
 #ifdef __x86_64__
@@ -56,7 +59,7 @@ int main(int argc, const char **argv)
     }
     else if(strcmp(argv[1], "pwn") == 0)
     {
-        return jailbreak(JBOPT_POST_ONLY);
+        return jailbreak(JBOPT_POST_ONLY, NULL, &sendLog);
     }
     LOG("Come again?");
     return -1;

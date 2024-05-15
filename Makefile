@@ -71,6 +71,8 @@ $(APP)/jailbreak-resources.deb:
 
 # TODO: Make more accurate prerequisites
 
+$(SRC_CLI)/control:
+$(SRC_CLI)/postinst:
 $(SRC_CLI)/jboffsets.h:
 $(SRC_CLI)/compile_stage2.sh:
 $(SRC_CLI)/compile_stage3.sh:
@@ -87,9 +89,9 @@ $(SRC_CLI)/install.m: $(SRC_CLI)/jboffsets.h $(SRC_CLI)/generated/stage2_hash3.h
 $(SRC_CLI)/stage2.m: $(SRC_ALL)/*.c $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.entitlements $(SRC_CLI)/compile_stage2.sh
 	bash $(SRC_CLI)/compile_stage2.sh
 
-$(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.m
+$(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.m $(SRC_CLI)/control $(SRC_CLI)/postinst
 	rm -rf -- $(SRC_CLI)/generated/package && rm -f $(SRC_CLI)/generated/*.deb
-	mkdir -p $(SRC_CLI)/generated/package/DEBIAN && cp $(SRC_CLI)/control $(SRC_CLI)/generated/package/DEBIAN/control
+	mkdir -p $(SRC_CLI)/generated/package/DEBIAN && cp $(SRC_CLI)/control $(SRC_CLI)/generated/package/DEBIAN/control && cp $(SRC_CLI)/postinst $(SRC_CLI)/generated/package/DEBIAN/postinst
 	mkdir -p $(SRC_CLI)/generated/package/private/etc/racoon && cp $(SRC_CLI)/generated/install_stage1_2 $(SRC_CLI)/generated/package/private/etc/racoon/install_stage1_2
 	mkdir -p $(SRC_CLI)/generated/package/usr/sbin && cp $(SRC_CLI)/generated/racoon.dylib $(SRC_CLI)/generated/package/usr/sbin/racoon.dylib
 	mkdir -p $(SRC_CLI)/generated/package/mystuff && cp $(SRC_CLI)/generated/stage4 $(SRC_CLI)/generated/package/mystuff/stage4
