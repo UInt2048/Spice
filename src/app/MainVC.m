@@ -1,4 +1,3 @@
-#include <shared/common.h>
 #include <shared/jailbreak.h>
 #include <shared/utils.h>
 #include <shared/sbx.h>
@@ -83,22 +82,7 @@ bool hasJailbroken = false;
     self.textView.translatesAutoresizingMaskIntoConstraints = NO;
 	self.textView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.7];
 	self.textView.textColor = [UIColor whiteColor];
-
-#if N41_10_3_4
-	self.textView.text = @"[*] Compiled for N41AP on iOS 10.3.4\n";
-#elif N69_11_3
-	self.textView.text = @"[*] Compiled for N69AP on iOS 11.3\n";
-#elif N69_11_4
-	self.textView.text = @"[*] Compiled for N69AP on iOS 11.4\n";
-#elif N71_11_3_1
-	self.textView.text = @"[*] Compiled for N71AP on iOS 11.3.1\n";
-#elif J96_11_1_2
-	self.textView.text = @"[*] Compiled for J96AP on iOS 11.1.2\n";
-#elif J96_11_3_1
-	self.textView.text = @"[*] Compiled for J96AP on iOS 11.3.1\n";
-#else
-	self.textView.text = @"[*] Compiled for unknown device\n";
-#endif
+	self.textView.text = [NSString stringWithFormat:@"[*] Compiled for %@ on %@\n", COMPILED_DEVICE, COMPILED_IOS];
 
 	self.textView.editable = NO;
 	self.textView.scrollEnabled = YES;

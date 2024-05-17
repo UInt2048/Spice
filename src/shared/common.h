@@ -22,13 +22,9 @@ extern SInt32 CFUserNotificationDisplayAlert(
 
 #ifdef __LP64__
 #define ADDR "0x%llx"
-    typedef uint64_t kptr_t;
 #else
 #define ADDR "0x%x"
-    typedef uint32_t kptr_t;
 #endif
-
-#include "jboffsets.h"
 
 #include "offsets.h"
 
@@ -80,69 +76,6 @@ extern kern_return_t mach_vm_read_overwrite(vm_map_t target_task, mach_vm_addres
 extern kern_return_t mach_vm_protect(task_t task, mach_vm_address_t addr, mach_vm_size_t size, boolean_t set_max, vm_prot_t new_prot);
 extern kern_return_t mach_vm_map(task_t task, mach_vm_address_t *addr, mach_vm_size_t size, mach_vm_offset_t mask, int flags, mem_entry_name_port_t object, memory_object_offset_t offset, boolean_t copy, vm_prot_t cur, vm_prot_t max, vm_inherit_t inheritance);
 extern kern_return_t mach_vm_remap(vm_map_t dst, mach_vm_address_t *dst_addr, mach_vm_size_t size, mach_vm_offset_t mask, int flags, vm_map_t src, mach_vm_address_t src_addr, boolean_t copy, vm_prot_t *cur_prot, vm_prot_t *max_prot, vm_inherit_t inherit);
-
-typedef struct {
-    struct {
-        kptr_t kernel_image_base;
-    } constant;
-
-    struct {
-        kptr_t copyin; // Duplicate
-        kptr_t copyout;
-        kptr_t current_task;
-        kptr_t get_bsdtask_info;
-        kptr_t vm_map_wire_external;
-        kptr_t vfs_context_current;
-        kptr_t vnode_lookup;
-        kptr_t osunserializexml;
-        kptr_t smalloc;
-        kptr_t proc_find; // Not in stage2.m version
-        kptr_t proc_rele; // Not in stage2.m version
-
-        kptr_t ipc_port_alloc_special;
-        kptr_t ipc_kobject_set;
-        kptr_t ipc_port_make_send;
-    } funcs;
-
-    struct {
-        kptr_t add_x0_x0_ret; // Duplicate
-    } gadgets;
-
-    struct {
-        kptr_t realhost;
-        kptr_t zone_map;
-        kptr_t kernel_task;
-        kptr_t kern_proc;
-        kptr_t rootvnode;
-        kptr_t osboolean_true;
-        kptr_t trust_cache;
-    } data;
-
-    struct {
-        kptr_t iosurface_root_userclient;
-    } vtabs;
-
-    struct {
-        uint32_t is_task_offset; // Duplicate
-        uint32_t task_itk_self;
-        uint32_t itk_registered; // Duplicate
-        uint32_t ipr_size; // Duplicate
-        uint32_t sizeof_task;
-        uint32_t proc_task;
-        uint32_t proc_p_csflags;
-        uint32_t task_t_flags;
-        uint32_t task_all_image_info_addr;
-        uint32_t task_all_image_info_size;
-    } struct_offsets;
-
-    struct {
-        uint32_t create_outsize;
-        uint32_t create_surface;
-        uint32_t set_value;
-    } iosurface;
-    
-    // Userland funcs is not in our version
-} offsets_t;
 
 typedef volatile struct {
     uint32_t ip_bits;

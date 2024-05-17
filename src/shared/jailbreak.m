@@ -22,7 +22,7 @@
 #include "ArchiveFile.h"
 
 #include "jailbreak.h"
-#include "jboffsets.h"
+#include "offsets.h"
 
 #define MACH(func)\
     ret = func;\

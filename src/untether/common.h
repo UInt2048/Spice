@@ -14,7 +14,7 @@
     typedef uint32_t kptr_t;
 #endif
 
-#include "../shared/jboffsets.h"
+#include "../shared/offsets.h"
 
 #ifdef LOG
 #undef LOG
@@ -59,16 +59,16 @@ struct offset_struct {
 	uint64_t fcntl_raw_syscall; // the raw syscall stub of fcntl
 	uint64_t raw_mach_vm_remap_call; // raw syscall stub for mach_vm_remap
 	// kernel
-	uint64_t ipr_size; // ipr_size offset
-	uint64_t trust_chain_head_ptr;
-	uint64_t copyin;
-	uint64_t gadget_add_x0_x0_ret;
+	// uint64_t ipr_size; // unused, offset of the ipr_size field
+	// uint64_t trust_chain_head_ptr; // unused, find_trustcache(kernel_symbols)
+	// uint64_t copyin; // unused, jake_find_symbol(kernel_symbols,"_copyin")
+	// uint64_t gadget_add_x0_x0_ret; // unused, jake_find_symbol(kernel_symbols,"_csblob_get_cdhash")
 	uint64_t rootdomainUC_vtab;
 	uint64_t swapprefix_addr;
-	uint64_t itk_registered;
-	uint64_t is_task;
+	// uint64_t itk_registered; // unused, offset of the itk registered field
+	// uint64_t is_task; // unused, offset of the is_task field
 	// internal
-	rop_gadget_t * stage1_ropchain; 
+	rop_gadget_t * stage1_ropchain;
 	rop_gadget_t * stage2_ropchain;
 	uint64_t stage2_base; // address where stage 2 gets mapped
 	uint64_t stage2_size; // size of stage 2 (also needed for stage 1)

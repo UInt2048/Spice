@@ -73,7 +73,7 @@ $(APP)/jailbreak-resources.deb:
 
 $(SRC_CLI)/control:
 $(SRC_CLI)/postinst:
-$(SRC_CLI)/jboffsets.h:
+$(SRC_CLI)/offsets.h:
 $(SRC_CLI)/compile_stage2.sh:
 $(SRC_CLI)/compile_stage3.sh:
 $(SRC_CLI)/compile_stage4.sh:
@@ -84,7 +84,7 @@ $(SRC_CLI)/generated/stage2_hash3.h: $(SRC_CLI)/stage3.m $(SRC_CLI)/compile_stag
 $(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/compile_stage4.sh
 	bash $(SRC_CLI)/compile_stage4.sh
 
-$(SRC_CLI)/install.m: $(SRC_CLI)/jboffsets.h $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/install_stage3_offsets.h
+$(SRC_CLI)/install.m: $(SRC_ALL)/offsets.h $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/install_stage3_offsets.h
 
 $(SRC_CLI)/stage2.m: $(SRC_ALL)/*.c $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.entitlements $(SRC_CLI)/compile_stage2.sh
 	bash $(SRC_CLI)/compile_stage2.sh
