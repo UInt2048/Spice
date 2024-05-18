@@ -148,6 +148,7 @@ We can use this to put our fake port at a known address and both new trustcache 
 
 ## Installation
 Obviously, just run `make` to create all generated files (the makefile requires macOS, use a VM or something if you need it).
+If you have an issue with the makefile, forcibly modify the makefile of img4lib to enable `-DUSE_LIBCOMPRESSION`
 
 The app is a *semi-untethered jailbreak*. The app will not install the untether payload.
 
@@ -194,14 +195,14 @@ If successful, the end looks something like:
 
 Pressing enter after this will restore control of the SSH connection.
 
-4. Now replace one of the launch daemons and check if the system keeps running stable even with racoon (this tests the killswitch).
-I would recommend replacing as follows:
+4. Now enable the killswitch with `nvram boot-args="__spice_untether_disable"` then replace one of the launch daemons and check if the system keeps running stable even with racoon (this tests the killswitch).
 
-```
-nvram boot-args="__spice_untether_disable" && \
-mv /System/Library/CoreServices/prdaily /System/Library/CoreServices/prdaily.bak && \
-cp /usr/sbin/racoon /System/Library/CoreServices/prdaily
-```
+TODO: How do you replace the daemon?
+
+I've attempted to replace `/System/Library/LaunchDaemons/com.apple.prdaily.plist` with the prdaily.plist in this folder and `/private/etc/racoon/racoon.conf` with the racoon.conf in this folder, then `mv /var/run/racoon/test.conf /private/etc/racoon/spice.conf`.
+(The reason for the latter half is that for me, /var/run/racoon has been getting deleted for some reason...)
+
+However, the command still seems not to work for some undiagnosable reason. I suspect that due to being triggered by launchd, it is being passed the -D argument automatically which causes it not to do anything.
 
 5. If you did you can then go for the real untether by changing the boot-args back to anything else, e.g. `nvram boot-args="__developer_mode_enabled"`
 

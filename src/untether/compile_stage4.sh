@@ -2,7 +2,7 @@
 
 # Makefile for stage 4 as the Makefile in the root dir is outdated (because I suck at Makefiles)
 cd $(realpath "$(dirname "${BASH_SOURCE[0]}")") # Ensure we're in the script directory
-$(< ./sdk.txt) clang -mios-version-min=10.0 -arch "$(< ./arch.txt)" -I../../include -larchive -framework IOKit ../../submodules/libjake/img4lib/libimg4.a ../../submodules/libjake/libjake.a stage4.m uland_offsetfinder.m ../shared/*.m ../shared/realsym.c -framework Foundation -framework Security -I../ -I ../../submodules/libjake/src/ -I ../../submodules/libjake/img4lib/libvfs/ -L../../submodules/libjake/img4lib/ -L../../submodules/libjake/lib/ -o ./generated/stage4 && jtool --sign --inplace ./generated/stage4 && jtool --sig ./generated/stage4
+$(< ./sdk.txt) clang -mios-version-min=10.0 -arch "$(< ./arch.txt)" -I../../include -larchive -framework IOKit ../../submodules/libjake/img4lib/libimg4.a ../../submodules/libjake/libjake.a stage4.m uland_offsetfinder.m ../shared/*.m ../shared/realsym.c -framework Foundation -framework Security -I../ -I ../../submodules/libjake/src/ -I ../../submodules/libjake/img4lib/libvfs/ -L../../submodules/libjake/img4lib/ -L../../submodules/libjake/img4lib/lzfse/build/bin -o ./generated/stage4 && jtool --sign --inplace ./generated/stage4 && jtool --sig ./generated/stage4
 
 # We should sign stage 4 without a legacy SHA1 code directory
 # The hash we want is the first 20 bytes of the SHA256 CDHash

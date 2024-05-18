@@ -71,9 +71,9 @@ $(APP)/jailbreak-resources.deb:
 
 # TODO: Make more accurate prerequisites
 
+$(SRC_ALL)/offsets.h:
 $(SRC_CLI)/control:
 $(SRC_CLI)/postinst:
-$(SRC_CLI)/offsets.h:
 $(SRC_CLI)/compile_stage2.sh:
 $(SRC_CLI)/compile_stage3.sh:
 $(SRC_CLI)/compile_stage4.sh:
@@ -81,7 +81,7 @@ $(SRC_CLI)/compile_stage4.sh:
 $(SRC_CLI)/generated/stage2_hash3.h: $(SRC_CLI)/stage3.m $(SRC_CLI)/compile_stage3.sh
 	bash $(SRC_CLI)/compile_stage3.sh
 
-$(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/compile_stage4.sh
+$(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/compile_stage4.sh $(JAKE)/libjake.a
 	bash $(SRC_CLI)/compile_stage4.sh
 
 $(SRC_CLI)/install.m: $(SRC_ALL)/offsets.h $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/install_stage3_offsets.h
@@ -115,7 +115,7 @@ $(APP):
 $(APP)/Base.lproj:
 	mkdir -p $@
 
-$(UNTETHER): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a | $(PAYLOAD)
+$(UNTETHER): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a | $(SRC_ALL)/offsets.h $(PAYLOAD)
 	$(IGCC) $(ARCH_CLI) $(UNTETHER_FLAGS) -shared -o $@ -Wl,-exported_symbols_list,res/untether.txt $(IGCC_FLAGS) $^
 	$(SIGN) $(SIGN_FLAGS) $@
 
@@ -124,15 +124,17 @@ $(TRAMP):
 	$(SIGN) $(SIGN_FLAGS) $@
 
 $(JAKE)/libjake.a: $(JAKE)/Makefile
-	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) CC='$(IGCC) $(ARCH_CLI)' LD='$(IGCC) $(ARCH_CLI)'
+	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) all CC='$(IGCC) $(ARCH_CLI)' LD='$(IGCC) $(ARCH_CLI)' COMMONCRYPTO=1
 
 $(JAKE)/Makefile:
 	git submodule update --init --recursive
+	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE)/img4lib/lzfse all CC='$(IGCC) $(ARCH_CLI)' LD='$(IGCC) $(ARCH_CLI)'
 
 clean:
 	rm -rf $(BIN)
+	rm -rf $(SRC_CLI)/generated/*
 	rm -f *.ipa *.dylib $(TRAMP)
-	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) clean
+	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) clean CC='$(IGCC) $(ARCH_CLI)'
 
 ifndef ID
 install:
