@@ -2,7 +2,7 @@
 
 ## Important notes
 
-If you have an A7-A9(X) device on iOS 11, this repo is extremely close to providing an untethered userland iOS 11 jailbreak.
+If you have an A7-A9(X) device on iOS 11, congratulations! This repo can now provide your device an untethered userland iOS 11 jailbreak.
 
 This should be blatantly obvious, but Spice will NOT magically untether your device that you [tethered downgraded to iOS 11.x](https://github.com/y08wilm/Semaphorin), even if you have blobs unless you've actually used them.
 
@@ -15,11 +15,13 @@ Spice can't help until you can run the vulnerable iOS 11 code (`/usr/sbin/racoon
 
 ## Device support
 
-At present, the repo is configured to build for the **iPhone 6S Plus (iPhone8,2) on 11.3.1**.
+At present, the repo is configured to build for the **iPhone 6S Plus (iPhone8,2) on 11.3.1**. The binaries in /docs are ONLY built for this device + iOS.
 
-The **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.1.2**, **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.3.1**, **iPhone SE (1st gen) (iPhone8,4), iOS 11.3**, and **iPhone SE (1st gen) (iPhone8,4), iOS 11.4** already have offsets and probably build fine if the appropriate support is turned on in offsets.h.
+The **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.1.2**, **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.3.1**, **iPhone SE (1st gen) (iPhone8,4), iOS 11.3**, and **iPhone SE (1st gen) (iPhone8,4), iOS 11.4** already have offsets and may build fine if the appropriate support is turned on in offsets.h.
 
 Any other device will require offsets to be added. PRs are welcomed to speed this up, but an actual device will be needed to provide the final offset (`DYLD_CACHE_FD`) if you desire support.
+
+Binaries are added to the repo by copying the DEB file in /generated and the Spice-DEV.ipa file to the /docs folder and running `cd docs && dpkg-scanpackages -m ./ > Packages && bzip2 Packages -k -f && cd ../`
 
 ## Installation
 
@@ -32,7 +34,7 @@ If you have an issue upgrading essential packages, run `apt --fix-broken install
 
 To install the untether payload (these files are located in ./src/untether/generated):
 1. Install the DEB file (use `make payload` if you can't find it) or manually copy the stage 1-2 install script to `/private/etc/racoon/install_stage1_2`, stage 3 to `/usr/sbin/racoon.dylib`, and stage 4 to `/mystuff/stage4`.
-2. If installing manually, type `/private/etc/racoon/install_stage1_2` in a terminal or SSH connection. This will create the folder `/var/run/racoon` if it does not yet exist.
+2. If installing manually, type `/private/etc/racoon/install_stage1_2; mv /var/run/racoon/test.conf /private/etc/racoon/spice.conf` in a terminal or SSH connection. This will create the folder `/var/run/racoon` if it does not yet exist.
 There will be a lot of output. If successful, the end looks something like:
 ```
 0x1f0214e60: 0x00000000 (NOP)
@@ -44,6 +46,8 @@ There will be a lot of output. If successful, the end looks something like:
 ```
 
 If you're running the DEB in Zebra, the last two lines might be replaced with "Finished!".
+
+You now want to replace `/private/etc/racoon/racoon.conf` with the racoon.conf in this folder. This is just to make sure that if `/var/run/racoon` gets deleted, that the exploit doesn't.
 
 3. Then execute racoon (the real one in PATH, should be `/usr/sbin/racoon`) till it doesn't kernel panic anymore to make sure you got the right offsets.
 If you get a segfault, and the crash report shows the beast gadget offset listed in your output, you likely need to set `STAGE1FD_SCREAM_TEST` to find the right stage 1 fd in the crash log.
@@ -73,14 +77,31 @@ Pressing enter after this will restore control of the SSH connection.
 
 4. Now enable the killswitch with `nvram boot-args="__spice_untether_disable"` then replace one of the launch daemons and check if the system keeps running stable even with racoon (this tests the killswitch).
 
-TODO: How do you replace the daemon?
+To replace the daemon, you first need to edit your jetsam configuration to ensure the daemon has enough memory to run the exploit without being killed.
 
-I've attempted to replace `/System/Library/LaunchDaemons/com.apple.prdaily.plist` with the prdaily.plist in this folder and `/private/etc/racoon/racoon.conf` with the racoon.conf in this folder, then `mv /var/run/racoon/test.conf /private/etc/racoon/spice.conf`.
-(The reason for the latter half is that for me, /var/run/racoon has been getting deleted for some reason...)
+I've edited the override configuration in `/System/Library/LaunchDaemons/com.apple.jetsamproperties.N66.plist` (replace N66 with your board config) for both `com.apple.prdaily` and `com.apple.racoon` to be:
 
-However, the command still seems not to work for some undiagnosable reason. I suspect that due to being triggered by launchd, it is being passed the -D argument automatically which causes it not to do anything.
+```
+				<dict>
+					<key>ActiveSoftMemoryLimit</key>
+					<integer>80</integer>
+					<key>InactiveHardMemoryLimit</key>
+					<integer>80</integer>
+					<key>JetsamPriority</key>
+					<integer>11</integer>
+				</dict>
+```
 
-5. If you did you can then go for the real untether by changing the boot-args back to anything else, e.g. `nvram boot-args="__developer_mode_enabled"`
+After doing this (and rebooting for the change to take effect), I then ran the following to actually perform the replacement:
+
+```
+mv /System/Library/CoreServices/prdaily /System/Library/CoreServices/prdaily.bak
+cp /usr/sbin/racoon /System/Library/CoreServices/prdaily
+/bin/launchctl unload /System/Library/LaunchDaemons/com.apple.prdaily.plist
+/bin/launchctl load /System/Library/LaunchDaemons/com.apple.prdaily.plist
+```
+
+5. If you did you can then go for the real untether by changing the boot-args back to anything else, e.g. `nvram boot-args="__spice_untether_enabled"`
 
 There, you need to watch out for three things:
 - the launch daemon isn't used by anything important (namely springboard) (otherwise you will softbrick when it fails to run)

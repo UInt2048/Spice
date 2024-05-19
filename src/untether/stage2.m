@@ -313,7 +313,7 @@ void build_chain_DBG(offset_struct_t * offsets,rop_var_t * ropvars) {
 	int pos = 0;
 	char * pos_buf = NULL;
 #if STAGE1FD_SCREAM_TEST
-	LOG("Stage 1 fd scream test is active\n\n")
+	LOG("Stage 1 fd scream test is active\n\n");
 #endif
 	LOG("STAGE 2 DBG\nWe start with our chain here, x0 is pointing to that location (%llx) and we are in longjmp atm",offsets->stage2_base);
 	while (next != NULL) {

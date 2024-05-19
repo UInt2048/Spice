@@ -98,12 +98,30 @@ task_t kernel_task;
 kptr_t kernel_slide;
 kptr_t kernproc;
 
+#include <time.h>
+#include <errno.h>
+#include <sys/sysctl.h>
+
+// Shamelessly stolen from https://stackoverflow.com/a/11676260/
+time_t bootsec()
+{
+    struct timeval boottime;
+    size_t len = sizeof(boottime);
+    int mib[2] = { CTL_KERN, KERN_BOOTTIME };
+    if( sysctl(mib, 2, &boottime, &len, NULL, 0) < 0 )
+    {
+        return -1.0;
+    }
+    return boottime.tv_sec;
+}
+
 kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, NSString*))
 {
     kern_return_t ret = 0;
     task_t self = mach_task_self();
     kptr_t kbase = 0;
     NSFileManager *fileMgr = [NSFileManager defaultManager];
+    #define PWN_LOG(...) do { sendLog(controller, [NSString stringWithFormat:@__VA_ARGS__]); LOG(__VA_ARGS__); } while(0)
 
     if(opt & JBOPT_POST_ONLY)
     {
@@ -243,6 +261,15 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     char *bundle_path = malloc(len);
     CFURLGetFileSystemRepresentation(resourcesUrl, TRUE, (UInt8 *)bundle_path, len);
     LOG("bundle path: %s", bundle_path);
+    
+    // make sure this only gets run once per boot
+    char *doublebootcheck = [[NSString stringWithFormat:@"/tmp/spice.%lu", (unsigned long)bootsec()] UTF8String];
+    if (access(doublebootcheck, F_OK) == 0) {
+    	PWN_LOG("We're already jailbroken silly");
+    	// spin for now
+    	while (1) {}
+    }
+    fclose(fopen(doublebootcheck, "w"));
     
     // TODO: hash checks on binaries 
     #define COPY_RESOURCE(name, to_path)\
@@ -580,7 +607,8 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         {
             LOG("finished post exploitation");
 
-            LOG("unloading prdaily...");
+            // Removed because the double boot check should make it safe
+            /*LOG("unloading prdaily...");
 
             ret = execprog("/bin/launchctl", (const char **)&(const char *[])
             {
@@ -596,7 +624,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                 goto out;
             }
 
-            LOG("prdaily unloaded\n");
+            LOG("prdaily unloaded\n");*/
 
             /* hope substrate is running by this point? */
 

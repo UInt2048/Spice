@@ -10,11 +10,14 @@
 // IF YOU CHANGE THESE VALUES HERE AND THEN USE IT IN A KEEP ALIVE DAEMON IT WILL CRASH OVER AND OVER AGAIN CAUSE A SOFTBRICK OF THE SYSTEM SO REALLY WATCH OUT WHEN YOU CHANGE THEM/MAKE SURE THEY ARE SET RIGHT WHEN YOU TEST THIS ON A NEW/DIFFERENT IOS VERSION
 // see stage1.c on when and how they are used (I think STAGE2_FD will always be DYLD_CACHE_FD + 1)
 
+// When you test directly with racoon, versus testing through a launch daemon, this descriptor may change.
+// In my testing on N69AP 11.3, the fd was 5 when testing after the semi-untether and 6 when replacing prdaily right after boot.
+
 #if STAGE1FD_SCREAM_TEST
 #define DYLD_CACHE_FD 3
-#elif (N69AP & IOS_11_3) || (N69AP & IOS_11_4) || (N66AP & IOS_11_3_1)
+#elif (N69AP & IOS_11_3) || (N69AP & IOS_11_4)
 #define DYLD_CACHE_FD 5
-#elif (J96AP & IOS_11_1_2) || (J96AP & IOS_11_3_1)
+#elif (N66AP & IOS_11_3_1) || (J96AP & IOS_11_1_2) || (J96AP & IOS_11_3_1)
 #define DYLD_CACHE_FD 6
 #else
 // If you're doing a scream test, it shouldn't matter too much what you set this to, but you have to set it. You can also use 6 if you want.

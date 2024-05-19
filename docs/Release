@@ -1,0 +1,8 @@
+Origin: UInt2048/Spice Repo
+Label: UInt2048/Spice Repo
+Suite: stable
+Version: 1.0
+Codename: ios
+Architectures: iphoneos-arm
+Components: main
+Description: Untethering your iOS 11 device :)
