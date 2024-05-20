@@ -216,7 +216,7 @@ typedef struct {
 // #define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
 // #define OFF_PIVOT_X21                                                     0x199bb31a8 // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
 // #define OFF_PIVOT_X21_X9                                                    0x50-0x38 // this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
-// #define OFF_MEMMOVE                                                       0x1ab688d20 // strlcpy second branch, adrp offset in thunk
+// #define OFF_MEMMOVE                                                       0x1ab688d20 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
 #define OFF_LCCONF_COUNTER                                                       0xa0 // "error allocating splitdns list buffer", switch case 0x87 below, first str offset
 // #define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
 // #define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache
@@ -236,7 +236,7 @@ typedef struct {
 // #define OFF_OPEN                                                          0x18097ce58 // dlsym of ___open
 // #define OFF_FCNTL_RAW                                                     0x18097c434 // dlsym of ___fcntl
 // #define OFF_RAW_MACH_VM_REMAP                                             0x18097bb58 // dlsym of _mach_vm_remap
-#define OFF_ROOTDOMAINUC_VTAB 0x803e039c // find __ZTV20RootDomainUserClient in kernel, first non-zero byte
+#define OFF_ROOTDOMAINUC_VTAB                                              0x803e039c // find __ZTV20RootDomainUserClient in kernel, first non-zero byte
 #define OFF_SWAPPREFIX_ADDR                                                0x80394f91 // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel that's the right address
 
 // iPhone 6S Plus (iPhone8,2), iOS 11.3.1
@@ -289,7 +289,7 @@ typedef struct {
 #define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
 #define OFF_PIVOT_X21                                                     0x199bb31a8 // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
 #define OFF_PIVOT_X21_X9                                                    0x50-0x38 // this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
-#define OFF_MEMMOVE                                                       0x1ab688d20 // strlcpy second branch, adrp offset in thunk
+#define OFF_MEMMOVE                                                       0x1ab688d20 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
 #define OFF_LCCONF_COUNTER                                                      0x10c // "error allocating splitdns list buffer", switch case 0x87 below, first str offset
 #define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
 #define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache
@@ -375,7 +375,7 @@ typedef struct {
 #define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
 #define OFF_PIVOT_X21                                                     0x199294928 // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
 #define OFF_PIVOT_X21_X9                                                    0x50-0x50 // this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
-#define OFF_MEMMOVE                                                       0x1aa84cbb8 // strlcpy second branch, adrp offset in thunk
+#define OFF_MEMMOVE                                                       0x1aa84cbb8 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
 #define OFF_LCCONF_COUNTER                                                      0x10c // VERIFY: "error allocating splitdns list buffer", switch case 0x87 below, first str offset
 #define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
 #define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache
@@ -397,6 +397,79 @@ typedef struct {
 #define OFF_RAW_MACH_VM_REMAP                                             0x18097ab54 // dlsym of _mach_vm_remap
 #define OFF_ROOTDOMAINUC_VTAB                                      0xfffffff007081f20 // find __ZTV20RootDomainUserClient in kernel, first non-zero byte
 #define OFF_SWAPPREFIX_ADDR                                        0xfffffff0075898c4 // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel that's the right address
+
+// iPhone7,1 (iPhone 6 Plus), iOS 11.2.6
+#elif (N56AP & IOS_11_2_6)
+#define OFF_KERNEL_IMAGE_BASE                                      0xfffffff007004000 // static
+#define OFF_COPYIN                                                 0xfffffff0071a4c64 // symbol (_copyin)
+#define OFF_COPYOUT                                                0xfffffff0071a4e94 // symbol (_copyout)
+#define OFF_CURRENT_TASK                                           0xfffffff0070f0354 // symbol (_current_task)
+#define OFF_GET_BSDTASK_INFO                                       0xfffffff0071058ec // symbol (_get_bsdtask_info)
+#define OFF_VM_MAP_WIRE_EXTERNAL                                   0xfffffff00714fe38 // symbol (_vm_map_wire_external)
+#define OFF_VFS_CONTEXT_CURRENT                                    0xfffffff0071f9874 // symbol (_vfs_context_current)
+#define OFF_VNODE_LOOKUP                                           0xfffffff0071db3f0 // symbol (_vnode_lookup)
+#define OFF_OSUNSERIALIZEXML                                       0xfffffff0074cfb6c // symbol (__Z16OSUnserializeXMLPKcPP8OSString)
+#define OFF_PROC_FIND                                              0xfffffff0073e7720 // symbol (_proc_find)
+#define OFF_PROC_RELE                                              0xfffffff0073e7690 // symbol (_proc_rele)
+#define OFF_SMALLOC                                                0xfffffff006b40aec // found by searching for "sandbox memory allocation failure"
+#define OFF_IPC_PORT_ALLOC_SPECIAL                                 0xfffffff0070b44c8 // \"ipc_processor_init\" in processor_start -> call above
+#define OFF_IPC_KOBJECT_SET                                        0xfffffff0070c9614 // above _mach_msg_send_from_kernel_proper (2nd above for 10.3.4)
+#define OFF_IPC_PORT_MAKE_SEND                                     0xfffffff0070b3f54 // first call in long path of KUNCUserNotificationDisplayFromBundle
+#define OFF_ADD_X0_X0_RET                                          0xfffffff0073bdb44 // gadget (or _csblob_get_cdhash)
+#define OFF_KERNEL_TASK                                            0xfffffff007630048 // symbol (_kernel_task)
+#define OFF_KERN_PROC                                              0xfffffff0076300a0 // symbol (_kernproc)
+#define OFF_ROOTVNODE                                              0xfffffff007630088 // symbol (_rootvnode)
+#define OFF_REALHOST                                               0xfffffff0075c4b98 // _host_priv_self -> adrp addr
+#define OFF_ZONE_MAP                                               0xfffffff0075e1e50 // str 'zone_init: kmem_suballoc failed', first qword above 
+#define OFF_OSBOOLEAN_TRUE                                         0xfffffff00762e640 // __ZN9OSBoolean11withBooleanEb -> first adrp addr (isn't used anywhere tho)
+#define OFF_TRUST_CACHE                                            0xfffffff00769b428 // (on iOS 10.3.4, use "%s: trust cache already loaded with matching UUID, ignoring\n", store below call to _lck_mtx_lock in same function) "%s: trust cache loaded successfully.\n" store above
+#define OFF_IOSURFACE_ROOT_USERCLIENT                              0xfffffff006ee8bc8 // (on iOS 10.3.4, search "IOSurfaceRootUserClient", store in function below first reference) 'iometa -Csov IOSurfaceRootUserClient kernel', vtab=...
+#define OFF_IS_TASK                                                              0x28 // "ipc_task_init", lower of two final offsets to a local variable in decompiled code
+#define OFF_TASK_ITK_SELF                                                        0xe0 // first reference of "ipc_task_reset", offset after _lck_mtx_lock
+#define OFF_ITK_REGISTERED                                                      0x2f0 // "ipc_task_init", first comparison below to parameter, first str offset in not zero branch
+#define OFF_IPR_SIZE                                                              0x8 // "ipc_object_copyout_dest: strange rights", offset of second ldr in function below (ipc_port_request->name->size, long path: search all instances of 0x10000003 to find _kernel_rpc_mach_port_construct_trap, needs to have a copyin call, and travel chain)
+#define OFF_SIZEOF_TASK                                                         0x5c8 // str "tasks", mov offset below (size of entire task struct)
+#define OFF_PROC_TASK                                                            0x18 // "PMTellAppWithResponse - Suspended", second offset above (proc->task)
+#define OFF_PROC_P_CSFLAGS                                                      0x2a8 // _cs_restricted, first ldr offset (proc->p_csflags)
+#define OFF_TASK_T_FLAGS                                                        0x3a0 // __ZN12IOUserClient18clientHasPrivilegeEPvPKc, in equal to 0 branch of foregroud strncmp, in function on iOS 10 (task->t_flags)
+#define OFF_TASK_ALL_IMAGE_INFO_ADDR                                            0x3a8 // "created task is not a member of a resource coalition", search 0x5f (task->all_image_info_addr, theoretically just +0x8 from t_flags)
+#define OFF_TASK_ALL_IMAGE_INFO_SIZE                                            0x3b0 // "created task is not a member of a resource coalition", search 0x5f (task->all_image_info_size, theoretically just +0x10 from t_flags)
+#define OFF_CREATE_OUTSIZE                                                      0xbc8 // TODO: prove this
+#define OFF_CREATE_SURFACE                                                          0 // static, IOSurfaceCreate is method 0 of IOSurfaceRootUserClient
+#define OFF_SET_VALUE                                                               9 // static, IOSurfaceSetValue is method 9 of IOSurfaceRootUserClient
+#define OFF_ANCHOR                                   (0xfffffff007607908 & 0xfffffff) // "unable to determine boot cpu!" in kernelcache, str x9, [x23, 0x78] below, take the lower 7 bits of value in x9 (the registers may vary for you, use instruction info if the #offset in Ghidra is making it hard to see)
+#define OFF_IOUC_IPC                                                             0x9c
+
+#define OFF_ISAKMP_CFG_CONFIG_DNS4                                    0x100067c10+0x8 // VERIFY: second reference of "No more than %d DNS", first adr in switch case 0x77, add 0x8
+#define OFF_LCCONF                                                        0x1000670e0 // VERIFY: "failed to set my ident: %s", value being offset by 0xb0 (0x6c on 32-bit)
+#define OFF_DNS4_ARRAY_TO_LCCONF             -(OFF_ISAKMP_CFG_CONFIG_DNS4-OFF_LCCONF) // -((isakmp_cfg_config_addr()+0x28-4*8)-lcconf_addr())
+#define OFF_STR_BUFF                                                                8 // based on the pivot gadget below (the x21 gadget will do a double deref based on specific value on a buffer we control so we need to know it's offset)
+#define OFF_MAX_SLIDE                                                       0x5b3c000 // read 8 bytes at OFF_OLD_CACHE_ADDR + 0xf0
+#define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
+#define OFF_PIVOT_X21                                                     0x199294928 // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
+#define OFF_PIVOT_X21_X9                                                    0x50-0x50 // this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
+#define OFF_MEMMOVE                                                       0x1aa854bb8 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
+#define OFF_LCCONF_COUNTER                                                      0x10c // VERIFY: "error allocating splitdns list buffer", switch case 0x87 below, first str offset
+#define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
+#define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache
+#define OFF_NEW_CACHE_ADDR                                                0x1c0000000 // you might want to change this because it might not work on the 5S but it should be fine for us
+#define OFF_BEAST_GADGET                                                  0x1a081db40 // search the dyld cache for e4 03 16 aa e5 03 14 aa e6 03 15 aa e7 03 13 aa e0 03 1a aa e1 03 19 aa e2 03 18 aa e3 03 17 aa 60 03 3f d6 fd 7b 47 a9 f4 4f 46 a9 f6 57 45 a9 f8 5f 44 a9 fa 67 43 a9 fc 6f 42 a9 e9 23 41 6d ff 03 02 91 c0 03 5f d6
+#define OFF_STR_X0_GADGET                                                 0x19735db10 // search the dyld cache for 60 16 00 f9 00 00 80 52 fd 7b 41 a9 f4 4f c2 a8 c0 03 5f d6
+#define OFF_STR_X0_GADGET_OFF                                                    0x28 // based on the gadget above (at which offset it stores x0 basically)
+#define OFF_CBZ_X0_GADGET                                                 0x1889a2758 // __ZN3rtc9TaskQueue12QueueContext13DeleteContextEPv
+#define OFF_CBZ_X0_X16_LOAD                                         0x1b0b5b000+0xb18 // decode the gadget above there will be a jump, follow that jump and decode the adrp and add there
+#define OFF_ADD_X0_GADGET                                                 0x184fc792c // search the dyld cache for a0 02 14 8b fd 7b 42 a9 f4 4f 41 a9 f6 57 c3 a8 c0 03 5f d6
+#define OFF_ERRNO             0x1b2060000+0xfe0+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // we can get that by getting a raw syscall (for example __mmap, then searching for a branch following that and then searching for an adrp and a str)
+#define OFF_NDR_RECORD              0x1b07d9018+OFF_NEW_CACHE_ADDR-OFF_OLD_CACHE_ADDR // address of label _NDR_record, we need to map it before using it
+#define OFF_LONGJMP                                                       0x180a856c8 // dlsym of __longjmp
+#define OFF_STACK_PIVOT                                                   0x180a856f4 // longjmp from mov sp, x2
+#define OFF_MMAP                                                          0x18097bbf0 // dlsym of ___mmap
+#define OFF_MEMCPY                                                        0x18095cd8c // dlsym of _memcpy
+#define OFF_OPEN                                                          0x18097be54 // dlsym of ___open
+#define OFF_FCNTL_RAW                                                     0x18097b430 // dlsym of ___fcntl
+#define OFF_RAW_MACH_VM_REMAP                                             0x18097ab54 // dlsym of _mach_vm_remap
+#define OFF_ROOTDOMAINUC_VTAB                                      0xfffffff00708df20 // find __ZTV20RootDomainUserClient in kernel, first non-zero byte
+#define OFF_SWAPPREFIX_ADDR                                        0xfffffff0075958c4 // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel that's the right address
 
 // iPad mini 4 (Wi-Fi) (iPad5,1), iOS 11.1.2
 #elif (J96AP & IOS_11_1_2)
@@ -448,7 +521,7 @@ typedef struct {
 #define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
 #define OFF_PIVOT_X21                                                     0x1990198fc // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
 #define OFF_PIVOT_X21_X9                                                    0x50-0x50 // this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
-#define OFF_MEMMOVE                                                       0x1aa0b8bb8 // strlcpy second branch, adrp offset in thunk
+#define OFF_MEMMOVE                                                       0x1aa0b8bb8 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
 #define OFF_LCCONF_COUNTER                                                      0x10c // "error allocating splitdns list buffer", switch case 0x87 below, first str offset
 #define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
 #define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache
@@ -521,7 +594,7 @@ typedef struct {
 #define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
 #define OFF_PIVOT_X21                                                     0x199bb31a8 // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
 #define OFF_PIVOT_X21_X9                                                    0x50-0x38 // this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
-#define OFF_MEMMOVE                                                       0x1ab3b0d20 // strlcpy second branch, adrp offset in thunk
+#define OFF_MEMMOVE                                                       0x1ab3b0d20 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
 #define OFF_LCCONF_COUNTER                                                      0x10c // "error allocating splitdns list buffer", switch case 0x87 below, first str offset
 #define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
 #define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache
@@ -594,7 +667,7 @@ typedef struct {
 #define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
 #define OFF_PIVOT_X21                                                     0x199bb31a8 // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
 #define OFF_PIVOT_X21_X9                                                    0x50-0x38 // this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
-#define OFF_MEMMOVE                                                       0x1ab680d20 // strlcpy second branch, adrp offset in thunk
+#define OFF_MEMMOVE                                                       0x1ab680d20 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
 #define OFF_LCCONF_COUNTER                                                      0x10c // "error allocating splitdns list buffer", switch case 0x87 below, first str offset
 #define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
 #define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache
@@ -667,7 +740,7 @@ typedef struct {
 #define OFF_SLIDE_VALUE                                                        0x4000 // hardcode that one
 #define OFF_PIVOT_X21                                                     0x199c4b93c // search the dyld cache for a8 06 40 f9 09 01 40 f9 29 1d 40 f9 e1 03 00 aa e0 03 08 aa 20 01 3f d6, or original: a8 06 40 f9 09 01 40 f9 29 29 40 f9 e3 07 40 f9 e2 03 00 aa e0 03 08 aa e1 03 16 aa e4 03 14 aa e5 03 13 aa 20 01 3f d6
 #define OFF_PIVOT_X21_X9                                                    0x50-0x38 // VERIFY! this is not needed on 11.1.2 but because 11.3.1 and above lack the original x21 gadget we need to introduce that one here
-#define OFF_MEMMOVE                                                       0x1ab7b0d50 // strlcpy second branch, adrp offset in thunk
+#define OFF_MEMMOVE                                                       0x1ab7b0d50 // strlcpy second branch, adrp offset in thunk (get from the actual bl instruction, not from decompiler)
 #define OFF_LCCONF_COUNTER                                                      0x10c // "error allocating splitdns list buffer", switch case 0x87 below, first str offset
 #define OFF_CACHE_TEXT_SEG_SIZE                                            0x30000000 // we can get that by parsing the segments from the cache (but this is always enough)
 #define OFF_OLD_CACHE_ADDR                                                0x180000000 // the first unslid address of the dyld shared cache

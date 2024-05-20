@@ -21,6 +21,7 @@ Devices with offsets already present but untested on a real device (these *may* 
 * **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.1.2**
 * **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.3.1**
 * **iPhone 5S (GSM) (iPhone6,1), iOS 11.2.6**
+* **iPhone 6 Plus (iPhone7,1), iOS 11.2.6**
 * **iPhone SE (1st gen) (iPhone8,4), iOS 11.3**
 * **iPhone SE (1st gen) (iPhone8,4), iOS 11.4**
 
