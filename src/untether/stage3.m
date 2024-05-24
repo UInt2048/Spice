@@ -507,7 +507,7 @@ void where_it_all_starts(kport_t * fakeport,void * fake_client,uint64_t ip_kobje
 	kwrite64(our_label + 0x10,0x0);
 
 	// spawn the other bin
-	offsets->userland_funcs.posix_spawn(&pid,"/mystuff/stage4",NULL,NULL,NULL,NULL);
+	offsets->userland_funcs.posix_spawn(&pid,"/spice/stage4",NULL,NULL,NULL,NULL);
 
 	LOG("finally spawned stage 4 what a ride");
 	// fallthrough, we want to exit now

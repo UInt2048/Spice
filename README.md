@@ -39,7 +39,7 @@ The app is a *semi-untethered jailbreak*. The app will not install the untether 
 If you have an issue upgrading essential packages, run `apt --fix-broken install file libplist3 libssl1.1.1` then `apt install -f dpkg ldid -o APT::Immediate-Configure=0` over an SSH connection.
 
 To install the untether payload (these files are located in ./src/untether/generated):
-1. Install the DEB file (use `make payload` if you can't find it) or manually copy the stage 1-2 install script to `/private/etc/racoon/install_stage1_2`, stage 3 to `/usr/sbin/racoon.dylib`, and stage 4 to `/mystuff/stage4`.
+1. Install the DEB file (use `make payload` if you can't find it) or manually copy the stage 1-2 install script to `/private/etc/racoon/install_stage1_2`, stage 3 to `/usr/sbin/racoon.dylib`, and stage 4 to `/spice/stage4`.
 2. If installing manually, type `/private/etc/racoon/install_stage1_2; mv /var/run/racoon/test.conf /private/etc/racoon/spice.conf` in a terminal or SSH connection. This will create the folder `/var/run/racoon` if it does not yet exist.
 There will be a lot of output. If successful, the end looks something like:
 ```

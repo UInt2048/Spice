@@ -407,12 +407,12 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     }
 
     {
-        // check if substrate is not installed & install it from a deb file 
+        // Substrate is not in the bootstrap, we may need to install it
         if ((opt & JBOPT_POST_ONLY) == 0)
         {
-            if (access("/usr/libexec/substrate", F_OK) != 0)
+            if (access("/usr/libexec/substrate", F_OK) != 0 && access("/usr/lib/libsubstitute.dylib", F_OK) != 0)
             {
-                LOG("substrate was not found? installing it...");
+                LOG("substrate was not found. installing it...");
 
                 COPY_RESOURCE("mobilesubstrate.deb", "/jb/mobilesubstrate.deb");
 
@@ -439,34 +439,36 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
     {
         // handle substrate's unrestrict library 
+        if (access("/usr/libexec/substrate", F_OK) == 0)
+        {
+        	if (access("/Library/MobileSubstrate", F_OK) != 0)
+        	{
+            	mkdir("/Library/MobileSubstrate", 0755);
+        	}
+        	if (access("/Lbirary/MobileSubstrate/ServerPlugins", F_OK) != 0)
+        	{
+           		mkdir("/Library/MobileSubstrate/ServerPlugins", 0755);
+        	}
 
-        if (access("/Library/MobileSubstrate", F_OK) != 0)
-        {
-            mkdir("/Library/MobileSubstrate", 0755);
-        }
-        if (access("/Lbirary/MobileSubstrate/ServerPlugins", F_OK) != 0)
-        {
-            mkdir("/Library/MobileSubstrate/ServerPlugins", 0755);
-        }
+        	if ((opt & JBOPT_POST_ONLY) == 0)
+        	{
+            	if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) == 0)
+            	{
+                	unlink("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
+                	LOG("deleted old Unrestrict.dylib");
+            	}
 
-        if ((opt & JBOPT_POST_ONLY) == 0)
-        {
-            if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) == 0)
-            {
-                unlink("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
-                LOG("deleted old Unrestrict.dylib");
-            }
-
-            COPY_RESOURCE("Unrestrict.dylib", "/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
-            LOG("unrestrict: %d", access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK));
-        }
-        else if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) != 0)
-        {
-            LOG("note: JBOPT_POST_ONLY mode but unrestrict.dylib was not found");
-        }
-        else
-        {
-            LOG("JBOPT_POST_ONLY mode and unrestrict is present, all is well");
+            	COPY_RESOURCE("Unrestrict.dylib", "/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
+            	LOG("unrestrict: %d", access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK));
+        	}
+        	else if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) != 0)
+        	{
+            	LOG("note: JBOPT_POST_ONLY mode but unrestrict.dylib was not found");
+        	}
+        	else
+        	{
+            	LOG("JBOPT_POST_ONLY mode and unrestrict is present, all is well");
+        	}
         }
     }
 
@@ -508,30 +510,35 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 	}
 
     {
-        if (access("/Library/Substrate", F_OK) == 0)
-        {
-            // move to old directory
-            NSString *newPath = [NSString stringWithFormat:@"/Library/Substrate.%lu", (unsigned long)time(NULL)];
-            LOG("moving /Library/Substrate to new path: %@", newPath);
+    	if (access("/usr/libexec/substrate", F_OK) == 0)
+    	{
+        	if (access("/Library/Substrate", F_OK) == 0)
+        	{
+            	// move to old directory
+            	NSString *newPath = [NSString stringWithFormat:@"/Library/Substrate.%lu", (unsigned long)time(NULL)];
+            	LOG("moving /Library/Substrate to new path: %@", newPath);
 
-            [fileMgr moveItemAtPath:@"/Library/Substrate" toPath:newPath error:nil];
+            	[fileMgr moveItemAtPath:@"/Library/Substrate" toPath:newPath error:nil];
 
-            if (access("/Library/Substrate", F_OK) == 0)
-            {
-                LOG("failed to move /Library/Substrate!!");
-                ret = KERN_FAILURE;
-                goto out;
-            }
-        }
+            	if (access("/Library/Substrate", F_OK) == 0)
+            	{
+                	LOG("failed to move /Library/Substrate!!");
+                	ret = KERN_FAILURE;
+                	goto out;
+            	}
+        	}
 
-        mkdir("/Library/Substrate", 1755);
+        	mkdir("/Library/Substrate", 1755);
 
-        if (access("/usr/libexec/substrate", F_OK) == 0)
-        {
             inject_trust("/usr/libexec/substrate");
 
             ret = execprog("/usr/libexec/substrate", NULL);
             LOG("substrate ret: %d", ret);
+        }
+        else if (access("/usr/lib/libsubstitute.dylib", F_OK) == 0)
+        {
+        	ret = execprog("/etc/rc.d/substitute-launcher", NULL);
+            LOG("substitute ret: %d", ret);
         }
         else if (opt & JBOPT_POST_ONLY)
         {

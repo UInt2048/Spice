@@ -68,6 +68,10 @@ $(APP)/bootstrap.tar.lzma:
 $(APP)/jailbreak-resources.deb:
 	echo Copying file to $@
 	cp $(RES)/jailbreak-resources.deb $@
+	
+$(APP)/mobilesubstrate.deb:
+	echo Copying file to $@
+	cp $(RES)/mobilesubstrate_0.9.7113_iphoneos-arm.deb $@
 
 # TODO: Make more accurate prerequisites
 
@@ -94,7 +98,7 @@ $(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_
 	mkdir -p $(SRC_CLI)/generated/package/DEBIAN && cp $(SRC_CLI)/control $(SRC_CLI)/generated/package/DEBIAN/control && cp $(SRC_CLI)/postinst $(SRC_CLI)/generated/package/DEBIAN/postinst
 	mkdir -p $(SRC_CLI)/generated/package/private/etc/racoon && cp $(SRC_CLI)/generated/install_stage1_2 $(SRC_CLI)/generated/package/private/etc/racoon/install_stage1_2
 	mkdir -p $(SRC_CLI)/generated/package/usr/sbin && cp $(SRC_CLI)/generated/racoon.dylib $(SRC_CLI)/generated/package/usr/sbin/racoon.dylib
-	mkdir -p $(SRC_CLI)/generated/package/mystuff && cp $(SRC_CLI)/generated/stage4 $(SRC_CLI)/generated/package/mystuff/stage4
+	mkdir -p $(SRC_CLI)/generated/package/spice && cp $(SRC_CLI)/generated/stage4 $(SRC_CLI)/generated/package/spice/stage4
 	find . -name ".DS_Store" -delete && dpkg-deb -b $(SRC_CLI)/generated/package && dpkg-name $(SRC_CLI)/generated/package.deb
 
 $(APP)/$(TARGET_GUI): $(SRC_GUI)/*.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a $(SRC_CLI)/uland_offsetfinder.m | $(APP)
