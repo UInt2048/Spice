@@ -131,7 +131,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         mach_msg_type_number_t cnt = TASK_DYLD_INFO_COUNT;
         ASSERT_RET(out, "task_info", task_info(kernel_task, TASK_DYLD_INFO, (task_info_t)&info, &cnt));
         kbase = info.all_image_info_addr;
-		LOG("kbase %llx\n",kbase);
+	PWN_LOG("kbase %llx\n",kbase);
     }
     else
     {
@@ -143,24 +143,24 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             
         if(ret != KERN_SUCCESS) goto out;
 
-        LOG("kernel been dun fucked");
+        PWN_LOG("kernel been dun fucked");
     }
 
     kernel_slide = kbase - offs.constant.kernel_image_base;
-	LOG("kslide %llx\n",kernel_slide);
+    PWN_LOG("kslide %llx\n",kernel_slide);
 
     if (!MACH_PORT_VALID(kernel_task))
     {
-        LOG("invalid kernel task");
+        PWN_LOG("invalid kernel task");
         goto out;
     }
 
-    LOG("got kernel_task: %x\n", kernel_task);
+    PWN_LOG("got kernel_task: %x\n", kernel_task);
 
     kernproc = rk64(offs.data.kern_proc + kernel_slide);
     VAL_CHECK(kernproc);
 
-    LOG("kernproc: %llx\n", kernproc);
+    PWN_LOG("kernproc: %llx\n", kernproc);
 
     MACH(elevate_to_root());
 
@@ -179,11 +179,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         // patch our csflags
         uint32_t csflags = rk32(myproc + offs.struct_offsets.proc_p_csflags); // proc->p_csflags (_cs_restricted, first ldr offset)
         VAL_CHECK(csflags);
-        LOG("current csflags: %x", csflags);
+        PWN_LOG("current csflags: %x", csflags);
 
         csflags = (csflags | CS_PLATFORM_BINARY | CS_INSTALLER | CS_GET_TASK_ALLOW) & ~(CS_RESTRICT | CS_HARD | CS_KILL);
         wk32(myproc + offs.struct_offsets.proc_p_csflags, csflags);
-        LOG("updated csflags: %x", csflags);
+        PWN_LOG("updated csflags: %x", csflags);
     }
 
     {
@@ -192,28 +192,28 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         uint32_t t_flags = rk32(mytask + offs.struct_offsets.task_t_flags); // task->t_flags
         VAL_CHECK(t_flags);
 
-        LOG("current t_flags: %x", t_flags);
+        PWN_LOG("current t_flags: %x", t_flags);
         t_flags |= 0x400; // TF_PLATFORM
 
         wk32(mytask + offs.struct_offsets.task_t_flags, t_flags);
-        LOG("new t_flags: %x", t_flags);
+        PWN_LOG("new t_flags: %x", t_flags);
     }
 
     MACH(remount_root_fs());
-    LOG("remounted root fs");
+    PWN_LOG("remounted root fs");
 
     fclose(fopen("/.cydia_no_stash", "w"));
 
     {
         // patch nvram
         MACH(unlock_nvram());
-        LOG("patched nvram successfully");
+        PWN_LOG("patched nvram successfully");
 
         // set generator
         MACH(set_generator("0x1111111111111111"));
 
         const char *current_gen = get_generator();
-        LOG("generator is set to: %s", current_gen);
+        PWN_LOG("generator is set to: %s", current_gen);
         
         if (current_gen)
         {
@@ -235,21 +235,21 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         struct task_dyld_info dyld_info = {0};
         mach_msg_type_number_t count = TASK_DYLD_INFO_COUNT;
         ret = task_info(kernel_task, TASK_DYLD_INFO, (task_info_t)&dyld_info, &count);
-        LOG("task_info ret: %x (%s)", ret, mach_error_string(ret));
+        PWN_LOG("task_info ret: %x (%s)", ret, mach_error_string(ret));
         
         if (ret == KERN_SUCCESS)
         {
-            LOG("all_image_info_addr: %llx", dyld_info.all_image_info_addr);
-            LOG("all_image_info_size: %llx", dyld_info.all_image_info_size);
+            PWN_LOG("all_image_info_addr: %llx", dyld_info.all_image_info_addr);
+            PWN_LOG("all_image_info_size: %llx", dyld_info.all_image_info_size);
             
             if (dyld_info.all_image_info_addr != kbase)
             {
-                LOG("failed to set all_image_info_addr godammit");
+                PWN_LOG("failed to set all_image_info_addr godammit");
             }
             
             if (dyld_info.all_image_info_size != kernel_slide)
             {
-                LOG("failed to set all_image_info_size godammit");
+                PWN_LOG("failed to set all_image_info_size godammit");
             }
         }
     }
@@ -260,7 +260,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     int len = 4096;
     char *bundle_path = malloc(len);
     CFURLGetFileSystemRepresentation(resourcesUrl, TRUE, (UInt8 *)bundle_path, len);
-    LOG("bundle path: %s", bundle_path);
+    PWN_LOG("bundle path: %s", bundle_path);
     
     // make sure this only gets run once per boot
     char *doublebootcheck = [[NSString stringWithFormat:@"/tmp/spice.%lu", (unsigned long)bootsec()] UTF8String];
@@ -288,7 +288,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
         if (access("/jb", F_OK) != 0)
         {
-            LOG("failed to create /jb directory!");
+            PWN_LOG("failed to create /jb directory!");
             ret = KERN_FAILURE;
             goto out;
         }
@@ -303,19 +303,19 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                 if (access("/jb/bootstrap.tar.lzma", F_OK) != 0)
                 {
-                    LOG("failed to find the bootstrap file");
+                    PWN_LOG("failed to find the bootstrap file");
                     ret = KERN_FAILURE;
                     goto out;
                 }
 
-                LOG("extracting bootstrap...");
+                PWN_LOG("extracting bootstrap...");
 
                 ArchiveFile *tar = [ArchiveFile archiveWithFile:@"/jb/bootstrap.tar.lzma"];
                 BOOL extractResult = [tar extractToPath:@"/"];
 
                 if (!extractResult)
                 {
-                    LOG("failed to extract bootstrap!");
+                    PWN_LOG("failed to extract bootstrap!");
                     ret = KERN_FAILURE;
                     goto out;
                 }
@@ -324,7 +324,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                 if (access("/jb/jailbreak-resources.deb", F_OK) != 0)
                 {
-                    LOG("failed to find jailbreak-resources.deb");
+                    PWN_LOG("failed to find jailbreak-resources.deb");
                     ret = KERN_FAILURE;
                     goto out;
                 }
@@ -333,14 +333,14 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                 if (!extractResult)
                 {
-                    LOG("failed to extract jailbreak-resources.deb!");
+                    PWN_LOG("failed to extract jailbreak-resources.deb!");
                     ret = KERN_FAILURE;
                     goto out;
                 }
 
                 fclose(fopen("/.spice_bootstrap_installed", "w+"));
 
-                LOG("finished extracting bootstrap");
+                PWN_LOG("finished extracting bootstrap");
 
                 {
                     // modify springboard settings plist so cydia shows 
@@ -354,7 +354,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     });
                     if (ret != 0)
                     {
-                        LOG("failed to run killall(1): %d", ret);
+                        PWN_LOG("failed to run killall(1): %d", ret);
                         ret = KERN_FAILURE;
                         goto out;
                     }
@@ -372,37 +372,37 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     });
                     if (ret != KERN_SUCCESS)
                     {
-                        LOG("failed to run killall(2): %d", ret);
+                        PWN_LOG("failed to run killall(2): %d", ret);
                         ret = KERN_FAILURE;
                         goto out;
                     }
 
-                    LOG("set SBShowNonDefaultSystemApps");
+                    PWN_LOG("set SBShowNonDefaultSystemApps");
                 }
 
                 {
-                    LOG("running uicache (this will take some time)...");
+                    PWN_LOG("running uicache (this will take some time)...");
 
                     ret = execprog("/usr/bin/uicache", NULL);
                     if (ret != 0)
                     {
-                        LOG("failed to run uicache!");
+                        PWN_LOG("failed to run uicache!");
                         ret = KERN_FAILURE;
                         goto out;
                     }
 
-                    LOG("done!");
+                    PWN_LOG("done!");
                 }
             }
         }
         else if (access("/.spice_bootstrap_installed", F_OK) != 0)
         {
-            LOG("big problem! we are in JBOPT_POST_ONLY mode but the bootstrap was not found!");   
+            PWN_LOG("big problem! we are in JBOPT_POST_ONLY mode but the bootstrap was not found!");   
             return KERN_FAILURE;
         }
         else 
         {
-            LOG("JBOPT_POST_ONLY mode and bootstrap is present, all is well");
+            PWN_LOG("JBOPT_POST_ONLY mode and bootstrap is present, all is well");
         }
     }
 
@@ -410,15 +410,19 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         // Substrate is not in the bootstrap, we may need to install it
         if ((opt & JBOPT_POST_ONLY) == 0)
         {
+            if (access("/usr/lib/libsubstitute.dylib", F_OK) == 0)
+            {
+                PWN_LOG("Warning: Substitute detected, will not install Substrate.");
+            }
             if (access("/usr/libexec/substrate", F_OK) != 0 && access("/usr/lib/libsubstitute.dylib", F_OK) != 0)
             {
-                LOG("substrate was not found. installing it...");
+                PWN_LOG("substrate was not found. installing it...");
 
                 COPY_RESOURCE("mobilesubstrate.deb", "/jb/mobilesubstrate.deb");
 
                 if (access("/jb/mobilesubstrate.deb", F_OK) != 0)
                 {
-                    LOG("tried to install substrate but failed to copy it!");
+                    PWN_LOG("tried to install substrate but failed to copy it!");
                     ret = KERN_FAILURE;
                     goto out;
                 }
@@ -427,12 +431,12 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                 if (!extractResult)
                 {
-                    LOG("attempted to install substrate but failed to extract it!");
+                    PWN_LOG("attempted to install substrate but failed to extract it!");
                     ret = KERN_FAILURE;
                     goto out;
                 }
 
-                LOG("finished installing substrate");
+                PWN_LOG("finished installing substrate");
             }
         }
     }
@@ -441,10 +445,10 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         // handle substrate's unrestrict library 
         if (access("/usr/libexec/substrate", F_OK) == 0)
         {
-        	if (access("/Library/MobileSubstrate", F_OK) != 0)
-        	{
-            	mkdir("/Library/MobileSubstrate", 0755);
-        	}
+            if (access("/Library/MobileSubstrate", F_OK) != 0)
+            {
+	            mkdir("/Library/MobileSubstrate", 0755);
+            }
         	if (access("/Lbirary/MobileSubstrate/ServerPlugins", F_OK) != 0)
         	{
            		mkdir("/Library/MobileSubstrate/ServerPlugins", 0755);
@@ -455,19 +459,19 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             	if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) == 0)
             	{
                 	unlink("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
-                	LOG("deleted old Unrestrict.dylib");
+                	PWN_LOG("deleted old Unrestrict.dylib");
             	}
 
             	COPY_RESOURCE("Unrestrict.dylib", "/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
-            	LOG("unrestrict: %d", access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK));
+            	PWN_LOG("unrestrict: %d", access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK));
         	}
         	else if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) != 0)
         	{
-            	LOG("note: JBOPT_POST_ONLY mode but unrestrict.dylib was not found");
+            	PWN_LOG("note: JBOPT_POST_ONLY mode but unrestrict.dylib was not found");
         	}
         	else
         	{
-            	LOG("JBOPT_POST_ONLY mode and unrestrict is present, all is well");
+            	PWN_LOG("JBOPT_POST_ONLY mode and unrestrict is present, all is well");
         	}
         }
     }
@@ -496,7 +500,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         dict[@"ZoneMapOffset"]      = [NSString stringWithFormat:@"0x%016llx", offs.data.zone_map + kernel_slide];
 
         [dict writeToFile:@"/jb/offsets.plist" atomically:YES];
-        LOG("wrote offsets.plist");
+        PWN_LOG("wrote offsets.plist");
         
         chown("/jb/offsets.plist", 0, 0);
         chmod("/jb/offsets.plist", 0644);
@@ -516,13 +520,13 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         	{
             	// move to old directory
             	NSString *newPath = [NSString stringWithFormat:@"/Library/Substrate.%lu", (unsigned long)time(NULL)];
-            	LOG("moving /Library/Substrate to new path: %@", newPath);
+            	PWN_LOG("moving /Library/Substrate to new path: %@", newPath);
 
             	[fileMgr moveItemAtPath:@"/Library/Substrate" toPath:newPath error:nil];
 
             	if (access("/Library/Substrate", F_OK) == 0)
             	{
-                	LOG("failed to move /Library/Substrate!!");
+                	PWN_LOG("failed to move /Library/Substrate!!");
                 	ret = KERN_FAILURE;
                 	goto out;
             	}
@@ -533,22 +537,22 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             inject_trust("/usr/libexec/substrate");
 
             ret = execprog("/usr/libexec/substrate", NULL);
-            LOG("substrate ret: %d", ret);
+            PWN_LOG("substrate ret: %d", ret);
         }
         else if (access("/usr/lib/libsubstitute.dylib", F_OK) == 0)
         {
         	ret = execprog("/etc/rc.d/substitute-launcher", NULL);
-            LOG("substitute ret: %d", ret);
+            PWN_LOG("substitute ret: %d", ret);
         }
         else if (opt & JBOPT_POST_ONLY)
         {
-            LOG("JBOPT_POST_ONLY and substrate was not found! something has gone horribly wrong");
+            PWN_LOG("JBOPT_POST_ONLY and substrate was not found! something has gone horribly wrong");
             ret = KERN_FAILURE;
             goto out;
         }
         else 
         {
-            LOG("substrate was not found, why was it not installed?!?!");
+            PWN_LOG("substrate was not found, why was it not installed?!?!");
             ret = KERN_FAILURE;
             goto out;
         }
@@ -576,9 +580,9 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         });
         if (ret != 0)
         {
-            LOG("failed to start launchdaemons: %d", ret);
+            PWN_LOG("failed to start launchdaemons: %d", ret);
         }
-        LOG("started launchdaemons: %d", ret);
+        PWN_LOG("started launchdaemons: %d", ret);
 
         // run rc.d scripts
         if (access("/etc/rc.d", F_OK) == 0)
@@ -597,14 +601,14 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                 if ([fullPath isEqualToString:@"/etc/rc.d/substrate"] ||
                     [fullPath isEqualToString:@"/etc/rc.d/substrated"])
                 {
-                    LOG("ignoring substrate...");
+                    PWN_LOG("ignoring substrate...");
                     continue;
                 }
 
                 ret = sys([fullPath UTF8String]);
                 
                 // poor man's WEIEXITSTATUS
-                LOG("ret on %s: %d\n", [fullPath UTF8String], (ret >> 8) & 0xff);
+                PWN_LOG("ret on %s: %d\n", [fullPath UTF8String], (ret >> 8) & 0xff);
             }
         }
     }
@@ -612,10 +616,10 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     {
         if ((opt & JBOPT_POST_ONLY) != 0)
         {
-            LOG("finished post exploitation");
+            PWN_LOG("finished post exploitation");
 
             // Removed because the double boot check should make it safe
-            /*LOG("unloading prdaily...");
+            /*PWN_LOG("unloading prdaily...");
 
             ret = execprog("/bin/launchctl", (const char **)&(const char *[])
             {
@@ -626,18 +630,18 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             });
             if (ret != 0)
             {
-                LOG("failed to unload prdaily! ret: %d", ret);
+                PWN_LOG("failed to unload prdaily! ret: %d", ret);
                 ret = KERN_FAILURE;
                 goto out;
             }
 
-            LOG("prdaily unloaded\n");*/
+            PWN_LOG("prdaily unloaded\n");*/
 
             /* hope substrate is running by this point? */
 
             if (access("/usr/bin/ldrestart", F_OK) != 0)
             {
-                LOG("failed to find ldrestart?!");
+                PWN_LOG("failed to find ldrestart?!");
                 ret = KERN_FAILURE;
                 goto out;
             }
@@ -645,7 +649,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             ret = execprog("/usr/bin/ldrestart", NULL);
             if (ret != 0)
             {
-                LOG("failed to execute ldrestart: %d", ret);
+                PWN_LOG("failed to execute ldrestart: %d", ret);
                 ret = KERN_FAILURE;
                 goto out;
             }
@@ -655,7 +659,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     ret = KERN_SUCCESS;
 
 out:
-	LOG("Restoring to mobile and exiting.");
+	PWN_LOG("Restoring to mobile and exiting.");
     restore_to_mobile();
 
     term_kexecute();
