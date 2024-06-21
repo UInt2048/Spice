@@ -34,6 +34,9 @@ IGCC            ?= $(SDK_RESULT) clang -mios-version-min=10.0
 ARCH_GUI        ?= -arch $(ARCH_RESULT)
 ARCH_CLI        ?= -arch $(ARCH_RESULT)
 IGCC_FLAGS      ?= -Wall -Wformat=0 -flto -Isrc -Iinclude -larchive -fmodules -framework IOKit $(CFLAGS)
+ifdef LEGACYSDK
+IGCC_FLAGS      += -Wl,-U,_SecKeyCreateWithData,-U,_SecKeyVerifySignature,-U,_fs_snapshot_list,-U,_fs_snapshot_rename
+endif
 ifdef RELEASE
 IGCC_FLAGS      += -DRELEASE=1
 endif

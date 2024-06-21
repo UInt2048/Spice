@@ -456,6 +456,7 @@ out:
 
 -(void)dealloc {
     close(_fd);
+    [super dealloc];
 }
 
 @end
