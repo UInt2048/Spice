@@ -1,8 +1,12 @@
-#include <shared/jailbreak.h>
-#include <shared/utils.h>
-#include <shared/sbx.h>
-
 #import <CoreFoundation/CoreFoundation.h>
+#include <UIKit/UIDevice.h>
+
+#include <shared/common.h>
+#include <shared/offsets.h>
+#include <untether/offsets.h>
+
+#include <shared/jailbreak.h> // for jailbreak function
+#include <shared/utils.h> // for respring function
 
 #import "MainVC.h"
 
@@ -82,7 +86,25 @@ bool hasJailbroken = false;
     self.textView.translatesAutoresizingMaskIntoConstraints = NO;
 	self.textView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.7];
 	self.textView.textColor = [UIColor whiteColor];
-	self.textView.text = [NSString stringWithFormat:@"[*] Compiled for %@ on %@\n", COMPILED_DEVICE, COMPILED_IOS];
+	
+	offsets_t *off1 = malloc(sizeof(offsets_t));
+	memset(off1,0,sizeof(offsets_t));
+    offset_struct_t *off2 = malloc(sizeof(offset_struct_t));
+	memset(off2,0,sizeof(offset_struct_t));
+	
+	if (populate_offsets(off1, off2)) {
+	    self.textView.text = [self.textView.text stringByAppendingString:[NSString stringWithFormat:@"[*] Using offsets for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
+	    if (off1->constant.verified) {
+	        self.textView.text = [self.textView.text stringByAppendingString:[NSString stringWithFormat:@"[*] Offsets verified for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
+	    } else {
+	        self.textView.text = [self.textView.text stringByAppendingString:[NSString stringWithFormat:@"[*] Offsets unverified, please inform if it functions\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
+	    }
+	} else {
+	    self.textView.text = [self.textView.text stringByAppendingString:[NSString stringWithFormat:@"[*] Offsets not found for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
+	    [jbButton setTitle:@"No offsets" forState:UIControlStateNormal];
+	    [jbButton removeTarget:nil action:NULL forControlEvents:UIControlEventAllEvents];
+	    [jbButton addTarget:self action:@selector(actionFailed) forControlEvents:UIControlEventTouchUpInside];
+	}
 
 	self.textView.editable = NO;
 	self.textView.scrollEnabled = YES;
@@ -103,6 +125,11 @@ bool hasJailbroken = false;
     [self.view addSubview:titleLabel];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:titleLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:titleLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:0.5 constant:0.0]];
+}
+
+- (void)actionFailed
+{
+    self.textView.text = [self.textView.text stringByAppendingString:[NSString stringWithFormat:@"[*] Please add offsets for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
 }
 
 - (void)actionJailbreak

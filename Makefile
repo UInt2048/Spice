@@ -23,7 +23,7 @@ endif
 UNTETHER         = lib$(TARGET_CLI).dylib
 TRAMP            = trampoline
 ICONS           := $(wildcard $(RES)/Icon-*.png)
-FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb
+FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb mobilesubstrate.deb
 
 SDK_FILE        := src/untether/sdk.txt
 SDK_RESULT      := $(shell cat ${SDK_FILE})
@@ -46,9 +46,11 @@ IBTOOL_FLAGS    ?= --output-format human-readable-text --errors --warnings --not
 SIGN            ?= codesign
 SIGN_FLAGS      ?= -s -
 
-.PHONY: all ipa untether clean install payload
+.PHONY: all app ipa untether clean install payload
 
 all: $(IPA) $(UNTETHER) $(TRAMP)
+
+app: ipa
 
 ipa: $(IPA)
 

@@ -74,6 +74,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     kptr_t kbase = 0;
     NSFileManager *fileMgr = [NSFileManager defaultManager];
     #define PWN_LOG(...) do { sendLog(controller, [NSString stringWithFormat:@__VA_ARGS__]); LOG(__VA_ARGS__); } while(0)
+    #define updateStage(stage) PWN_LOG("Jailbreaking... (%d/21)", stage)
 
     if(opt & JBOPT_POST_ONLY)
     {
@@ -115,6 +116,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     PWN_LOG("kernproc: %llx\n", kernproc);
 
     MACH(elevate_to_root());
+    updateStage(15);
 
     MACH(init_kexecute(offs.data.zone_map, offs.gadgets.add_x0_x0_ret));
 
@@ -153,6 +155,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
     MACH(remount_root_fs());
     PWN_LOG("remounted root fs");
+    updateStage(16);
 
     fclose(fopen("/.cydia_no_stash", "w"));
 
@@ -222,6 +225,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     	while (1) {}
     }
     fclose(fopen(doublebootcheck, "w"));
+    updateStage(17);
     
     // TODO: hash checks on binaries 
     #define COPY_RESOURCE(name, to_path)\
@@ -288,6 +292,38 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     PWN_LOG("failed to extract jailbreak-resources.deb!");
                     ret = KERN_FAILURE;
                     goto out;
+                }
+                
+                // Substrate is not in the bootstrap, so let's just install it
+                if (access("/usr/lib/libsubstitute.dylib", F_OK) == 0)
+                {
+                    PWN_LOG("Warning: Substitute detected, will not install Substrate.");
+                }
+                
+                if (access("/usr/libexec/substrate", F_OK) != 0 && access("/usr/lib/libsubstitute.dylib", F_OK) != 0)
+                {
+                    install_substrate:
+                    PWN_LOG("substrate was not found. installing it...");
+    
+                    COPY_RESOURCE("mobilesubstrate.deb", "/jb/mobilesubstrate.deb");
+    
+                    if (access("/jb/mobilesubstrate.deb", F_OK) != 0)
+                    {
+                        PWN_LOG("tried to install substrate but failed to copy it!");
+                        ret = KERN_FAILURE;
+                        goto out;
+                    }
+    
+                    BOOL extractResult = extractDeb(@"/jb/mobilesubstrate.deb");
+    
+                    if (!extractResult)
+                    {
+                        PWN_LOG("attempted to install substrate but failed to extract it!");
+                        ret = KERN_FAILURE;
+                        goto out;
+                    }
+    
+                    PWN_LOG("finished installing substrate");
                 }
 
                 fclose(fopen("/.spice_bootstrap_installed", "w+"));
@@ -357,38 +393,15 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             PWN_LOG("JBOPT_POST_ONLY mode and bootstrap is present, all is well");
         }
     }
-
+    updateStage(18);
     {
-        // Substrate is not in the bootstrap, we may need to install it
         if ((opt & JBOPT_POST_ONLY) == 0)
         {
-            if (access("/usr/lib/libsubstitute.dylib", F_OK) == 0)
-            {
-                PWN_LOG("Warning: Substitute detected, will not install Substrate.");
-            }
             if (access("/usr/libexec/substrate", F_OK) != 0 && access("/usr/lib/libsubstitute.dylib", F_OK) != 0)
             {
-                PWN_LOG("substrate was not found. installing it...");
-
-                COPY_RESOURCE("mobilesubstrate.deb", "/jb/mobilesubstrate.deb");
-
-                if (access("/jb/mobilesubstrate.deb", F_OK) != 0)
-                {
-                    PWN_LOG("tried to install substrate but failed to copy it!");
-                    ret = KERN_FAILURE;
-                    goto out;
-                }
-
-                BOOL extractResult = extractDeb(@"/jb/mobilesubstrate.deb");
-
-                if (!extractResult)
-                {
-                    PWN_LOG("attempted to install substrate but failed to extract it!");
-                    ret = KERN_FAILURE;
-                    goto out;
-                }
-
-                PWN_LOG("finished installing substrate");
+                PWN_LOG("Warning: Substrate not found, returning to stage 17.");
+                updateStage(17);
+                goto install_substrate;
             }
         }
     }
@@ -427,7 +440,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         	}
         }
     }
-
+    updateStage(19);
     {
         NSMutableDictionary *dict = NULL;
 
@@ -516,7 +529,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
          * -- remember; it handles codesign patching
          */ 
     }
-
+    updateStage(20);
     {
         // TODO: copy/check for launchctl
         MACH(inject_trust("/bin/launchctl"));
@@ -564,7 +577,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             }
         }
     }
-
+    updateStage(21);
     {
         if ((opt & JBOPT_POST_ONLY) != 0)
         {

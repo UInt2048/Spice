@@ -277,7 +277,10 @@ uint64_t get_addr_from_name(offset_struct_t * offsets, char * name) {
 	uint64_t sym = (uint64_t)dlsym(RTLD_DEFAULT,name);
 	if (sym == 0) {LOG("symbol (%s) not found",name);exit(1);}
 	uint64_t cache_addr = 0;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 	syscall(294, &cache_addr); // get the current slid cache address
+#pragma clang diagnostic pop
 	// unslide the ptr returned by dlsym
 	sym += 0x180000000;
 	sym -= cache_addr;

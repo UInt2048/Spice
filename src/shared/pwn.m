@@ -327,7 +327,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t *tfp0, kptr_t *kbase, void* c
     client_vtab_addr                    = 0;
     
     #define PWN_LOG(...) do { sendLog(controller, [NSString stringWithFormat:@__VA_ARGS__]); LOG(__VA_ARGS__); } while(0)
-    #define updateStage(stage) PWN_LOG("Jailbreaking... (%d/14)", stage)
+    #define updateStage(stage) PWN_LOG("Jailbreaking... (%d/21)", stage)
     
     updateStage(1);
     PWN_LOG("---> pwning kernel...");
