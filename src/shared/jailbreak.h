@@ -14,6 +14,7 @@ extern task_t kernel_task;
 extern kptr_t kernel_slide;
 extern kptr_t kernproc;
 
-int jailbreak(uint32_t opt, void* controller, void (*updateStage)(void*, NSString*));
+time_t bootsec();
+int jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, NSString*));
 
 #endif

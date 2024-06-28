@@ -105,6 +105,8 @@ bool hasJailbroken = false;
 	    [jbButton removeTarget:nil action:NULL forControlEvents:UIControlEventAllEvents];
 	    [jbButton addTarget:self action:@selector(actionFailed) forControlEvents:UIControlEventTouchUpInside];
 	}
+	
+	self.textView.text = [self.textView.text stringByAppendingString:[NSString stringWithFormat:@"[*] Booted at %@\n", [[[NSISO8601DateFormatter alloc] init] stringFromDate:[NSDate dateWithTimeIntervalSince1970:bootsec()]]]];
 
 	self.textView.editable = NO;
 	self.textView.scrollEnabled = YES;

@@ -253,8 +253,10 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     {
         if ((opt & JBOPT_POST_ONLY) == 0)
         {
+            BOOL attemptFlag = NO;
             if (access("/.spice_bootstrap_installed", F_OK) != 0)
             {
+                extract_bootstrap:
                 COPY_RESOURCE("bootstrap.tar.lzma", "/jb/bootstrap.tar.lzma");
 
                 if (access("/jb/bootstrap.tar.lzma", F_OK) != 0)
@@ -331,7 +333,20 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                 PWN_LOG("finished extracting bootstrap");
 
                 {
-                    // modify springboard settings plist so cydia shows 
+                    enable_sbshownondefaultsystemapps:
+                    // modify springboard settings plist so cydia shows
+                    
+                    if (access("/usr/bin/killall", F_OK) != 0)
+                    {
+                        PWN_LOG("Failed to access /usr/bin/killall");
+                        if (attemptFlag) {
+                            ret = KERN_FAILURE;
+                            goto out;
+                        } else {
+                            attemptFlag = YES;
+                            goto extract_bootstrap;
+                        }
+                    }
 
                     ret = execprog("/usr/bin/killall", (const char **)&(const char *[])
                     {
@@ -402,6 +417,13 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                 PWN_LOG("Warning: Substrate not found, returning to stage 17.");
                 updateStage(17);
                 goto install_substrate;
+            }
+            
+            if ([[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"] objectForKey:@"SBShowNonDefaultSystemApps"] != [NSNumber numberWithBool:YES])
+            {
+                PWN_LOG("Warning: SBShowNonDefaultSystemApps not enabled, returning to stage 17.");
+                updateStage(17);
+                goto enable_sbshownondefaultsystemapps;
             }
         }
     }
