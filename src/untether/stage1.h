@@ -24,8 +24,8 @@
 #warning Scream test is enabled by default
 #define DYLD_CACHE_FD 3
 #endif
-#define STAGE2_FD (DYLD_CACHE_FD+1)
-void generate_stage1_rop_chain(offset_struct_t * offsets);
-void stage1(int fd, offset_struct_t * offsets);
+#define STAGE2_FD (DYLD_CACHE_FD + 1)
+void generate_stage1_rop_chain(offset_struct_t* offsets);
+void stage1(int fd, offset_struct_t* offsets);
 
 #endif

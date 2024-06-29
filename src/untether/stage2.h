@@ -7,15 +7,14 @@
 #ifndef STAGE2_H
 #define STAGE2_H
 
-
 // fake msg struct
 typedef uint64_t mach_port_poly_t; // this just assumes the type idk if it's acc a uint64_t
 
 typedef struct {
-	mach_msg_header_t head;
-	mach_msg_body_t msgh_body;
-	mach_msg_ool_ports_descriptor_t desc[1];
-	char pad[4096];
+    mach_msg_header_t head;
+    mach_msg_body_t msgh_body;
+    mach_msg_ool_ports_descriptor_t desc[1];
+    char pad[4096];
 } ool_message_struct;
 
 #pragma pack(4)
@@ -107,8 +106,6 @@ typedef volatile struct {
 #define IKOT_CLOCK 25
 #define NENT 1
 
-
-
-uint64_t get_addr_from_name(offset_struct_t * offsets,char * name);
-void stage2(jake_img_t kernel_symbols, offset_struct_t * offsets, offsets_t * lib_offsets, char * base_dir); 
+uint64_t get_addr_from_name(offset_struct_t* offsets, char* name);
+void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, offsets_t* lib_offsets, char* base_dir);
 #endif

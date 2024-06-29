@@ -1,10 +1,10 @@
 #if 0
-#include <dlfcn.h>              // dlsym
-#include <stdint.h>
-#include <unistd.h>             // usleep
-#include <mach/mach.h>
-#include "common.h"
 #include "sbx.h"
+#include "common.h"
+#include <dlfcn.h> // dlsym
+#include <mach/mach.h>
+#include <stdint.h>
+#include <unistd.h> // usleep
 
 extern kern_return_t io_hideventsystem_open(mach_port_t server, task_t task, uint32_t type, void *bplist, uint32_t bplist_len, uint32_t unk0, uint32_t unk1, mach_port_t reply, mach_port_t* client);
 extern kern_return_t io_hideventsystem_clear_service_cache(mach_port_t client);
@@ -177,15 +177,14 @@ mach_port_t deja_xnu(void)
     ASSERT_RET("act_get_state(saved)", act_get_state(bb_thread, ARM_THREAD_STATE64, (thread_state_t)&saved_state, &cnt));
     arm_thread_state64_t state = saved_state;
 
-#define RCALL(th, func) \
-do \
-{ \
-    thread_t _th = (th); \
-    state.__pc = (func); \
-    state.__lr = sym_ret; \
-    ASSERT_RET("thread_go(malloc)", thread_go(_th, &state)); \
-    ASSERT_RET("thread_wait(malloc)", thread_wait(_th, &state, sym_ret)); \
-} while(0)
+#define RCALL(th, func)                                                       \
+    do {                                                                      \
+        thread_t _th = (th);                                                  \
+        state.__pc = (func);                                                  \
+        state.__lr = sym_ret;                                                 \
+        ASSERT_RET("thread_go(malloc)", thread_go(_th, &state));              \
+        ASSERT_RET("thread_wait(malloc)", thread_wait(_th, &state, sym_ret)); \
+    } while (0)
 
     state.__x[0] = REGSIZE * 4;
     RCALL(bb_thread, sym_malloc);

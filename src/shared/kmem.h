@@ -1,4 +1,5 @@
-
+#ifndef KMEM_H
+#define KMEM_H
 #include <mach/mach.h>
 
 void kread(uint64_t kaddr, void* buffer, uint32_t length);
@@ -13,3 +14,4 @@ void wk64(uint64_t kaddr, uint64_t val);
 uint64_t kalloc(uint64_t size);
 void kfree(uint64_t addr, uint64_t size);
 void kprotect(uint64_t kaddr, uint32_t size, int prot);
+#endif

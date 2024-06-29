@@ -7,10 +7,10 @@
 
 #ifdef __LP64__
 #define ADDR "0x%llx"
-    typedef uint64_t kptr_t;
+typedef uint64_t kptr_t;
 #else
 #define ADDR "0x%x"
-    typedef uint32_t kptr_t;
+typedef uint32_t kptr_t;
 #endif
 
 #include "../shared/offsets.h"
@@ -21,9 +21,14 @@
 #endif
 
 #ifdef RELEASE
-#   define LOG(str, args...) do { } while(0)
+#define LOG(str, args...) \
+    do {                  \
+    } while (0)
 #else
-#   define LOG(str, args...) do { NSLog(@ str "\n", ##args); } while(0)
+#define LOG(str, args...)         \
+    do {                          \
+        NSLog(@str "\n", ##args); \
+    } while (0)
 #endif
 
 #endif

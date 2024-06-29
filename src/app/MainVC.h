@@ -1,11 +1,13 @@
+#ifndef MAINVC_H
+#define MAINVC_H
 #import <UIKit/UIKit.h>
 NSString* deviceName();
 
 @interface MainVC : UIViewController
 
-@property (nonatomic, strong) UITextView *textView;
+@property (nonatomic, strong) UITextView* textView;
 
-- (void)showLog:(NSString *)log;
+- (void)showLog:(NSString*)log;
 
 - (id)init;
 
@@ -18,3 +20,4 @@ NSString* deviceName();
 - (void)exploitFailed;
 
 @end
+#endif

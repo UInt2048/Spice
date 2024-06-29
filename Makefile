@@ -8,12 +8,14 @@ VERSION          = 1.0.0
 BIN              = bin
 RES              = res
 APP              = $(BIN)/Payload/$(TARGET_GUI).app
-SRC_GUI          = src/app
+SRC_ALL          = src/shared
 SRC_CLI          = src/untether
+SRC_GUI          = src/app
+
 PAYLOAD          = $(SRC_CLI)/generated/lol.spyware.spiceuntether_1.0.160_iphoneos-arm.deb
 NO_UNTETHER     := $(SRC_CLI)/stage3.m $(SRC_CLI)/stage4.m $(SRC_CLI)/generator.m # These are only pre-dependencies
 UNTETHER_SRC    := $(filter-out $(NO_UNTETHER),$(wildcard $(SRC_CLI)/*.m))
-SRC_ALL          = src/shared
+FORMAT_SRC      := $(filter-out $(SRC_ALL)/offsets.m,$(wildcard $(SRC_ALL)/*.h $(SRC_ALL)/*.m $(SRC_CLI)/*.h $(SRC_CLI)/*.m $(SRC_CLI)/*.c $(SRC_GUI)/*.h $(SRC_GUI)/*.m))
 JAKE             = submodules/libjake
 ifdef RELEASE
 IPA              = $(TARGET_GUI).ipa
@@ -144,6 +146,8 @@ clean:
 	rm -rf $(SRC_CLI)/generated/*
 	rm -f *.ipa *.dylib $(TRAMP)
 	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) clean CC='$(IGCC) $(ARCH_CLI)'
+	clang-format -i -style="{BasedOnStyle: WebKit, UseTab: Never}" $(FORMAT_SRC)
+	clang-format -i -style="{BasedOnStyle: WebKit, UseTab: Never, AlignConsecutiveAssignments: AcrossEmptyLinesAndComments}" $(SRC_ALL)/offsets.m
 
 ifndef ID
 install:
