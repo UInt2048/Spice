@@ -124,6 +124,7 @@ int install(const char* config_path, const char* racoon_path, const char* dyld_c
     myoffsets->BEAST_GADGET_LOADER = myoffsets->BEAST_GADGET + 4 * 9;
     myoffsets->BEAST_GADGET_CALL_ONLY = myoffsets->BEAST_GADGET + 4 * 8;
     myoffsets->rop_nop = myoffsets->BEAST_GADGET + 4 * 17;
+    myoffsets->pivot_x21_x9_offset = 0x50 - myoffsets->pivot_x21_x9_offset; // stage1.m really needs the difference from 0x50
     myoffsets->raw_mach_vm_remap_call = ((kptr_t)lib_offsets->userland_funcs.mach_vm_remap + lib_offsets->constant.old_cache_addr - lib_offsets->constant.new_cache_addr);
 
     // myoffsets->stage1_ropchain is set by ROP_SETUP(offsets->stage1_ropchain) in stage1.m

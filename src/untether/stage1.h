@@ -16,15 +16,18 @@
 #if STAGE1FD_SCREAM_TEST
 #warning Scream test is enabled
 #define DYLD_CACHE_FD 3
-#elif PRDAILY_REPLACEMENT
-#define DYLD_CACHE_FD 5
-#elif NO_REPLACEMENT
-#define DYLD_CACHE_FD 6
-#else
-#warning Scream test is enabled by default
-#define DYLD_CACHE_FD 3
 #endif
+
+#ifndef DYLD_CACHE_FD
+#error Stage 1 file descriptor is not defined
+#else
+#define STR(x) #x
+#define QUOTE(x) STR(x)
+#pragma message "Stage 1 file descriptor is: " QUOTE(DYLD_CACHE_FD)
+#endif
+
 #define STAGE2_FD (DYLD_CACHE_FD + 1)
+
 void generate_stage1_rop_chain(offset_struct_t* offsets);
 void stage1(int fd, offset_struct_t* offsets);
 
