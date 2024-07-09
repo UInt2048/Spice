@@ -153,8 +153,8 @@ clean:
 	rm -rf $(SRC_CLI)/generated/*
 	rm -f *.ipa *.dylib $(TRAMP)
 	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) clean CC='$(IGCC) $(ARCH_CLI)'
-	clang-format -i -style="{BasedOnStyle: WebKit, UseTab: Never}" $(FORMAT_SRC)
-	clang-format -i -style="{BasedOnStyle: WebKit, UseTab: Never, AlignConsecutiveAssignments: AcrossEmptyLinesAndComments}" $(SRC_ALL)/offsets.m
+	clang-format -i -style="{BasedOnStyle: WebKit, InsertNewlineAtEOF: true, UseTab: Never}" $(FORMAT_SRC)
+	clang-format -i -style="{BasedOnStyle: WebKit, InsertNewlineAtEOF: true, UseTab: Never, AlignConsecutiveAssignments: AcrossEmptyLinesAndComments}" $(SRC_ALL)/offsets.m
 
 ifndef ID
 install:
