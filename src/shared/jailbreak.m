@@ -74,6 +74,13 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         sendLog(controller, [NSString stringWithFormat:@__VA_ARGS__]); \
         LOG(__VA_ARGS__);                                              \
     } while (0)
+#ifdef __LP64__
+#define PWN_LOG_KPTR(...) PWN_LOG("%s %llx\n", __VA_ARGS__)
+#define FORMAT_KERNEL @"0x%016llx"
+#else
+#define PWN_LOG_KPTR(...) PWN_LOG("%s %x\n", __VA_ARGS__)
+#define FORMAT_KERNEL @"0x%08x"
+#endif
 #define updateStage(stage) PWN_LOG("Jailbreaking... (%d/21)", stage)
 
     if (opt & JBOPT_POST_ONLY) {
@@ -83,7 +90,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         mach_msg_type_number_t cnt = TASK_DYLD_INFO_COUNT;
         ASSERT_RET(out, "task_info", task_info(kernel_task, TASK_DYLD_INFO, (task_info_t)&info, &cnt));
         kbase = info.all_image_info_addr;
-        PWN_LOG("kbase %llx\n", kbase);
+        PWN_LOG_KPTR("kbase", kbase);
     } else {
         // suspend_all_threads();
 
@@ -98,7 +105,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     }
 
     kernel_slide = kbase - offs.constant.kernel_image_base;
-    PWN_LOG("kslide %llx\n", kernel_slide);
+    PWN_LOG_KPTR("kslide", kernel_slide);
 
     if (!MACH_PORT_VALID(kernel_task)) {
         PWN_LOG("invalid kernel task");
@@ -110,7 +117,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     kernproc = rk64(offs.data.kern_proc + kernel_slide);
     VAL_CHECK(kernproc);
 
-    PWN_LOG("kernproc: %llx\n", kernproc);
+    PWN_LOG_KPTR("kernproc:", kernproc);
 
     MACH(elevate_to_root());
     updateStage(15);
@@ -239,45 +246,45 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         }
     }
 
+    BOOL attemptFlag = NO;
+    BOOL extractResult = YES;
+
+#define FIND_FAIL(path)                     \
+    do {                                    \
+        if (access(path, F_OK) != 0) {      \
+            PWN_LOG("Failed to find" path); \
+            ret = KERN_FAILURE;             \
+            goto out;                       \
+        }                                   \
+    } while (0)
+
+#define EXTRACT_FAIL(path)                     \
+    do {                                       \
+        if (!extractResult) {                  \
+            PWN_LOG("Failed to extract" path); \
+            ret = KERN_FAILURE;                \
+            goto out;                          \
+        }                                      \
+    } while (0)
+
+#define EXTRACT_DEB(path)                  \
+    do {                                   \
+        FIND_FAIL(path);                   \
+        PWN_LOG("Extracting " path);       \
+        extractResult = extractDeb(@path); \
+        EXTRACT_FAIL(path);                \
+    } while (0)
+
     {
         if ((opt & JBOPT_POST_ONLY) == 0) {
-            BOOL attemptFlag = NO;
+
             if (access("/.spice_bootstrap_installed", F_OK) != 0) {
             extract_bootstrap:
-                COPY_RESOURCE("bootstrap.tar.lzma", "/jb/bootstrap.tar.lzma");
-
-                if (access("/jb/bootstrap.tar.lzma", F_OK) != 0) {
-                    PWN_LOG("failed to find the bootstrap file");
-                    ret = KERN_FAILURE;
-                    goto out;
-                }
-
-                PWN_LOG("extracting bootstrap...");
-
-                ArchiveFile* tar = [ArchiveFile archiveWithFile:@"/jb/bootstrap.tar.lzma"];
-                BOOL extractResult = [tar extractToPath:@"/"];
-
-                if (!extractResult) {
-                    PWN_LOG("failed to extract bootstrap!");
-                    ret = KERN_FAILURE;
-                    goto out;
-                }
+                COPY_RESOURCE("bootstrap.deb", "/jb/bootstrap.deb");
+                EXTRACT_DEB("/jb/bootstrap.deb");
 
                 COPY_RESOURCE("jailbreak-resources.deb", "/jb/jailbreak-resources.deb");
-
-                if (access("/jb/jailbreak-resources.deb", F_OK) != 0) {
-                    PWN_LOG("failed to find jailbreak-resources.deb");
-                    ret = KERN_FAILURE;
-                    goto out;
-                }
-
-                extractResult = extractDeb(@"/jb/jailbreak-resources.deb");
-
-                if (!extractResult) {
-                    PWN_LOG("failed to extract jailbreak-resources.deb!");
-                    ret = KERN_FAILURE;
-                    goto out;
-                }
+                EXTRACT_DEB("/jb/jailbreak-resources.deb");
 
                 // Substrate is not in the bootstrap, so let's just install it
                 if (access("/usr/lib/libsubstitute.dylib", F_OK) == 0) {
@@ -289,21 +296,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     PWN_LOG("substrate was not found. installing it...");
 
                     COPY_RESOURCE("mobilesubstrate.deb", "/jb/mobilesubstrate.deb");
-
-                    if (access("/jb/mobilesubstrate.deb", F_OK) != 0) {
-                        PWN_LOG("tried to install substrate but failed to copy it!");
-                        ret = KERN_FAILURE;
-                        goto out;
-                    }
-
-                    BOOL extractResult = extractDeb(@"/jb/mobilesubstrate.deb");
-
-                    if (!extractResult) {
-                        PWN_LOG("attempted to install substrate but failed to extract it!");
-                        ret = KERN_FAILURE;
-                        goto out;
-                    }
-
+                    EXTRACT_DEB("/jb/mobilesubstrate.deb");
                     PWN_LOG("finished installing substrate");
                 }
 
@@ -420,15 +413,15 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             dict = [[NSMutableDictionary alloc] init];
         }
 
-        dict[@"AddRetGadget"] = [NSString stringWithFormat:@"0x%016llx", offs.gadgets.add_x0_x0_ret + kernel_slide];
-        dict[@"KernProc"] = [NSString stringWithFormat:@"0x%016llx", offs.data.kern_proc + kernel_slide];
-        dict[@"OSBooleanTrue"] = [NSString stringWithFormat:@"0x%016llx", rk64(rk64(offs.data.osboolean_true + kernel_slide))];
-        dict[@"OSBooleanFalse"] = [NSString stringWithFormat:@"0x%016llx", rk64(rk64(offs.data.osboolean_true + 0x8 + kernel_slide))];
-        dict[@"OSUnserializeXML"] = [NSString stringWithFormat:@"0x%016llx", offs.funcs.osunserializexml + kernel_slide];
-        dict[@"ProcFind"] = [NSString stringWithFormat:@"0x%016llx", offs.funcs.proc_find + kernel_slide];
-        dict[@"ProcRele"] = [NSString stringWithFormat:@"0x%016llx", offs.funcs.proc_rele + kernel_slide];
-        dict[@"Smalloc"] = [NSString stringWithFormat:@"0x%016llx", offs.funcs.smalloc + kernel_slide];
-        dict[@"ZoneMapOffset"] = [NSString stringWithFormat:@"0x%016llx", offs.data.zone_map + kernel_slide];
+        dict[@"AddRetGadget"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.gadgets.add_x0_x0_ret + kernel_slide];
+        dict[@"KernProc"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.data.kern_proc + kernel_slide];
+        dict[@"OSBooleanTrue"] = [NSString stringWithFormat:FORMAT_KERNEL, (kptr_t)rk64(rk64(offs.data.osboolean_true + kernel_slide))];
+        dict[@"OSBooleanFalse"] = [NSString stringWithFormat:FORMAT_KERNEL, (kptr_t)rk64(rk64(offs.data.osboolean_true + 0x8 + kernel_slide))];
+        dict[@"OSUnserializeXML"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.osunserializexml + kernel_slide];
+        dict[@"ProcFind"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.proc_find + kernel_slide];
+        dict[@"ProcRele"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.proc_rele + kernel_slide];
+        dict[@"Smalloc"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.smalloc + kernel_slide];
+        dict[@"ZoneMapOffset"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.data.zone_map + kernel_slide];
 
         [dict writeToFile:@"/jb/offsets.plist" atomically:YES];
         PWN_LOG("wrote offsets.plist");

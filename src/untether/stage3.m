@@ -16,7 +16,11 @@
 // this is basically the version of the exploit used in the app (minus the race part obv) just copy pasted into here and then I changed a few things so that it doesn't rely on cache functions
 // so for a more readable version/to understand it please check the version under shared (pwn.m)
 
+#ifdef __LP64__
 typedef uint64_t kptr_t;
+#else
+typedef uint32_t kptr_t;
+#endif
 typedef int kern_return_t;
 typedef uint32_t mach_port_t;
 typedef mach_port_t* mach_port_array_t;
@@ -28,10 +32,10 @@ typedef uint32_t mach_port_name_t;
 typedef mach_port_t task_t;
 typedef mach_port_t vm_map_t;
 typedef uint64_t mach_vm_size_t;
-typedef uint64_t mach_msg_timeout_t;
-typedef uint64_t mach_msg_size_t;
+typedef uint32_t mach_msg_timeout_t;
+typedef uint32_t mach_msg_size_t;
 typedef uint32_t mach_msg_option_t;
-typedef uint64_t mach_msg_return_t;
+typedef kern_return_t mach_msg_return_t;
 typedef uint64_t mach_vm_offset_t;
 typedef uint32_t mach_port_right_t;
 typedef bool boolean_t;
@@ -121,6 +125,7 @@ typedef struct
 
 void write(int fd, char* cbuf, int nbyte)
 {
+#ifdef __LP64__
     // an an input it's a file descriptor set to STD_ERR 2
     // as an output this will be used for returning syscall return value;
     register int x0 __asm__("x0") = fd;
@@ -142,6 +147,29 @@ void write(int fd, char* cbuf, int nbyte)
         "memory",
         // inform the compiler we clobber carry flag (during the syscall itself)
         "cc");
+#else
+    // an an input it's a file descriptor set to STD_ERR 2
+    // as an output this will be used for returning syscall return value;
+    register int r0 __asm__("r0") = fd;
+    // as an input string to write
+    // as an output this will be used for returning syscall return value higher half (in this particular case 0)
+    register char* r1 __asm__("r1") = cbuf;
+    // string length
+    register int r2 __asm__("r2") = nbyte;
+    // syscall write is 4
+    register int r12 __asm__("r12") = SYS_write; // user_ssize_t write(int fd, user_addr_t cbuf, user_size_t nbyte);
+
+    // full variant using stack local variables for register x0,x1,x2,x16 input
+    // syscall result collected in x0 & x1 using "semi" intrinsic assembler
+    __asm__ volatile( // all args prepared, make the syscall
+        "swi 0x80"
+        : "=r"(r0), "=r"(r1) // mark x0 & x1 as syscall outputs
+        : "r"(r0), "r"(r1), "r"(r2), "r"(r12) : // mark the inputs
+        // inform the compiler we read the memory
+        "memory",
+        // inform the compiler we clobber carry flag (during the syscall itself)
+        "cc");
+#endif
 }
 
 #define STD_OUT 1
@@ -632,10 +660,17 @@ out:
     // while (1) {}
 
     // exit call
+#ifdef __LP64__
     __asm__(
         "movz x0, 0x0\n" // return 0
         "movz x16, 0x1\n" // void exit(int rval)
         "svc 0x80");
+#else
+    __asm__(
+        "mov r0, #0x0\n" // return 0
+        "mov r12, #0x1\n" // void exit(int rval)
+        "swi 0x80");
+#endif
 }
 
 // kinda messy function signature

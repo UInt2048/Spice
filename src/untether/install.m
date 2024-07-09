@@ -85,7 +85,7 @@ int install(const char* config_path, const char* racoon_path, const char* dyld_c
     populate_offsets(lib_offsets, myoffsets);
 
     // uses dlsym to get an address of a symbol and then return it's unslid value
-    uint64_t (^get_addr_from_name)(offset_struct_t*, char*) = ^(offset_struct_t* offsets, char* name) {
+    void* (^slide_addr)(offsets_t*, char*) = ^(offsets_t* offsets, char* name) {
         uint64_t sym = (uint64_t)dlsym(RTLD_DEFAULT, name);
         if (sym == 0) {
             NSLog(@"symbol (%s) not found", name);
@@ -96,29 +96,30 @@ int install(const char* config_path, const char* racoon_path, const char* dyld_c
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         syscall(294, &cache_addr); // get the current slid cache address
 #pragma clang diagnostic pop
-        // unslide the ptr returned by dlsym
-        sym += 0x180000000;
+        // slide the ptr returned by dlsym
+        sym += offsets->constant.new_cache_addr;
         sym -= cache_addr;
-        return sym;
+        return (void*)sym;
     };
 
+    myoffsets->old_cache_addr = lib_offsets->constant.old_cache_addr;
     myoffsets->new_cache_addr = lib_offsets->constant.new_cache_addr;
 
     // Untested fallback behavior
     if (lib_offsets->userland_funcs.IOConnectTrap6 == 0) {
-        lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(get_addr_from_name(myoffsets, "IOConnectTrap6") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_ports_lookup = (void*)(get_addr_from_name(myoffsets, "mach_ports_lookup") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_task_self = (void*)(get_addr_from_name(myoffsets, "mach_task_self") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_port_destroy = (void*)(get_addr_from_name(myoffsets, "mach_port_destroy") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_port_deallocate = (void*)(get_addr_from_name(myoffsets, "mach_port_deallocate") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_port_allocate = (void*)(get_addr_from_name(myoffsets, "mach_port_allocate") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_port_insert_right = (void*)(get_addr_from_name(myoffsets, "mach_port_insert_right") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_ports_register = (void*)(get_addr_from_name(myoffsets, "mach_ports_register") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.mach_msg = (void*)(get_addr_from_name(myoffsets, "mach_msg") - 0x180000000 + myoffsets->new_cache_addr);
-        lib_offsets->userland_funcs.posix_spawn = (void*)(get_addr_from_name(myoffsets, "posix_spawn") - 0x180000000 + myoffsets->new_cache_addr);
+        lib_offsets->userland_funcs.IOConnectTrap6 = slide_addr(lib_offsets, "IOConnectTrap6");
+        lib_offsets->userland_funcs.mach_ports_lookup = slide_addr(lib_offsets, "mach_ports_lookup");
+        lib_offsets->userland_funcs.mach_task_self = slide_addr(lib_offsets, "mach_task_self");
+        lib_offsets->userland_funcs.mach_port_destroy = slide_addr(lib_offsets, "mach_port_destroy");
+        lib_offsets->userland_funcs.mach_port_deallocate = slide_addr(lib_offsets, "mach_port_deallocate");
+        lib_offsets->userland_funcs.mach_port_allocate = slide_addr(lib_offsets, "mach_port_allocate");
+        lib_offsets->userland_funcs.mach_port_insert_right = slide_addr(lib_offsets, "mach_port_insert_right");
+        lib_offsets->userland_funcs.mach_ports_register = slide_addr(lib_offsets, "mach_ports_register");
+        lib_offsets->userland_funcs.mach_msg = slide_addr(lib_offsets, "mach_msg");
+        lib_offsets->userland_funcs.posix_spawn = slide_addr(lib_offsets, "posix_spawn");
     }
     if (lib_offsets->userland_funcs.mach_vm_remap == 0) {
-        lib_offsets->userland_funcs.mach_vm_remap = (void*)(get_addr_from_name(myoffsets, "_mach_vm_remap") - 0x180000000 + myoffsets->new_cache_addr);
+        lib_offsets->userland_funcs.mach_vm_remap = slide_addr(lib_offsets, "_mach_vm_remap");
     }
 
     myoffsets->BEAST_GADGET_LOADER = myoffsets->BEAST_GADGET + 4 * 9;

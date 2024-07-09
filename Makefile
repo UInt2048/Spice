@@ -25,7 +25,7 @@ endif
 UNTETHER         = lib$(TARGET_CLI).dylib
 TRAMP            = trampoline
 ICONS           := $(wildcard $(RES)/Icon-*.png)
-FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb mobilesubstrate.deb
+FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.deb jailbreak-resources.deb mobilesubstrate.deb
 
 SDK_FILE        := src/untether/sdk.txt
 SDK_RESULT      := $(shell cat ${SDK_FILE})
@@ -75,9 +75,9 @@ $(APP)/Unrestrict.dylib:
 	echo Copying file to $@
 	cp $(RES)/Unrestrict.dylib $@
 
-$(APP)/bootstrap.tar.lzma:
+$(APP)/bootstrap.deb:
 	echo Copying file to $@
-	cp $(RES)/bootstrap.tar.lzma $@
+	cp $(RES)/spicebootstrap_1.0_iphoneos-arm.deb $@
 
 $(APP)/jailbreak-resources.deb:
 	echo Copying file to $@

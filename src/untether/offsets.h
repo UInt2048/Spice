@@ -13,6 +13,7 @@ struct offset_struct {
     uint64_t memmove; // address of the memmove pointer we smash in the dyld cache data
     uint64_t lcconf_counter_offset; // offset of counter in the lcconf struct
     uint64_t cache_text_seg_size; // size of the dyld cache text segment
+    uint64_t old_cache_addr;
     uint64_t new_cache_addr; // the new text address of the cache
     // framework (for stage 2)
     uint64_t BEAST_GADGET; // siguzas gadget (see rop.h)
