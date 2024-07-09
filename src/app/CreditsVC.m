@@ -1,6 +1,9 @@
 #import "CreditsVC.h"
 
-UILabel* creditLabel;
+static UILabel* creditLabel;
+
+#define UICOLOR(r, g, b, a) [UIColor colorWithRed:(CGFloat)(r / 255.0) green:(CGFloat)(g / 255.0) blue:(CGFloat)(b / 255.0) alpha:(CGFloat)a]
+#define CGCOLOR(r, g, b, a) (id) UICOLOR(r, g, b, a).CGColor
 
 @implementation CreditsVC
 
@@ -16,20 +19,13 @@ UILabel* creditLabel;
     [super viewWillAppear:animated];
     CAGradientLayer* gradient = [CAGradientLayer layer];
     gradient.frame = self.view.bounds;
-    gradient.colors = @[ (id)[UIColor colorWithRed:92.0 / 255.0 green:201.0 / 255.0 blue:59.0 / 255.0 alpha:1.0].CGColor,
-        (id)[UIColor colorWithRed:42.0 / 255.0 green:100.0 / 255.0 blue:25.0 / 255.0 alpha:1.0].CGColor ];
+    gradient.colors = @[ CGCOLOR(92, 201, 59, 1.0), CGCOLOR(42, 100, 25, 1.0) ];
     [self.view.layer insertSublayer:gradient atIndex:0];
 }
 
 - (void)loadView
 {
     [super loadView];
-
-    CAGradientLayer* gradient = [CAGradientLayer layer];
-    gradient.frame = self.view.bounds;
-    gradient.colors = @[ (id)[UIColor colorWithRed:92.0 / 255.0 green:201.0 / 255.0 blue:59.0 / 255.0 alpha:1.0].CGColor,
-        (id)[UIColor colorWithRed:42.0 / 255.0 green:100.0 / 255.0 blue:25.0 / 255.0 alpha:1.0].CGColor ];
-    [self.view.layer insertSublayer:gradient atIndex:0];
 
     creditLabel = [UILabel new];
     creditLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -42,7 +38,7 @@ UILabel* creditLabel;
 - PrimePlatypus, LukeZGD, cxdxn1 for assistance\n\
 - blacktop for the ipsw tool\n\
 - Jonathan Levin for jtool";
-    [creditLabel setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
+    [creditLabel setBackgroundColor:UICOLOR(0, 0, 0, 0.0)];
     creditLabel.font = [UIFont systemFontOfSize:14];
 
     [self.view addSubview:creditLabel];
