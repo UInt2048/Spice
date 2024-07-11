@@ -861,7 +861,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
 #else
     if (DEVICE_EQUAL_TO(@"iPhone5,1") && SYSTEM_VERSION_EQUAL_TO(@"10.3.4")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_SOCKET;
+        liboffsets->flags                                   = FLAG_SOCK_PORT;
         liboffsets->constant.old_cache_addr                 = 0x1a000000; // static (SHARED_REGION_BASE_ARM in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x40000000; // static (SHARED_REGION_SIZE_ARM is 0x26000000)
         liboffsets->constant.kernel_image_base              = 0x80001000; // static

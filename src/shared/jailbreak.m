@@ -234,6 +234,8 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         PWN_LOG("We're already jailbroken silly");
         // spin for now
         while (1) { }
+    } else {
+        PWN_LOG("Double boot check activated");
     }
     fclose(fopen(doublebootcheck, "w"));
     updateStage(17);
@@ -321,6 +323,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                     if (access("/usr/bin/killall", F_OK) != 0) {
                         PWN_LOG("Failed to access /usr/bin/killall");
+                    attempt_bootstrap_fix:
                         if (attemptFlag) {
                             ret = KERN_FAILURE;
                             goto out;
@@ -331,7 +334,10 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     }
 
                     ret = execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "-SIGSTOP", "cfprefsd", NULL });
-                    if (ret != 0) {
+                    if (ret == 85) /* Rejected by amfid */ {
+                        PWN_LOG("failed to run unsigned binary?");
+                        goto attempt_bootstrap_fix;
+                    } else if (ret != 0) {
                         PWN_LOG("failed to run killall(1): %d", ret);
                         ret = KERN_FAILURE;
                         goto out;

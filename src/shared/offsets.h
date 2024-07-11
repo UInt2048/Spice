@@ -169,4 +169,11 @@ bool populate_offsets(offsets_t* liboffsets, struct offset_struct* offsets);
 #define CPU_DATA_RTCLOCK_DATAP_OFF 0x1D8
 #endif
 
+// Used in sock_port primitive function
+#ifdef __LP64__
+#define OFFSET_IP6PO_MINMTU 164
+#else
+#define OFFSET_IP6PO_MINMTU 116
+#endif
+
 #endif
