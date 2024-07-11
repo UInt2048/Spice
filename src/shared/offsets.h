@@ -3,8 +3,10 @@
 
 #ifdef __LP64__
 typedef uint64_t kptr_t;
+#define OFF_IOUC_IPC 0x9c
 #else
 typedef uint32_t kptr_t;
+#define OFF_IOUC_IPC 0x5c
 #endif
 
 typedef uint64_t mach_port_poly_t; // We don't know what it is, but apparently a uint64_t works
@@ -12,7 +14,7 @@ typedef uint64_t mach_port_poly_t; // We don't know what it is, but apparently a
 #define FLAG_VERIFIED (1 << 0)
 #define FLAG_LIGHTSPEED (1 << 1)
 #define FLAG_VORTEX (1 << 2)
-#define FLAG_SOCKET (1 << 3)
+#define FLAG_SOCK_PORT (1 << 3)
 
 typedef struct {
     struct {
@@ -158,5 +160,13 @@ typedef struct {
 uint32_t get_anchor(void);
 typedef struct offset_struct offset_struct_t;
 bool populate_offsets(offsets_t* liboffsets, struct offset_struct* offsets);
+
+// Credit to https://github.com/0x7ff/maphys/blob/7ffffffab7f4fb1e9644f02a97299e5a28300f3e/maphys.c#L703
+// Used in sock_port to get kernel slide
+#ifdef __LP64__
+#define CPU_DATA_RTCLOCK_DATAP_OFF 0x1A8
+#else
+#define CPU_DATA_RTCLOCK_DATAP_OFF 0x1D8
+#endif
 
 #endif

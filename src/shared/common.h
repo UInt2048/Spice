@@ -29,23 +29,24 @@ extern SInt32 CFUserNotificationDisplayAlert(
 #include "offsets.h"
 
 #ifdef RELEASE
-#define LOG(str, args...) \
-    do {                  \
+#warning Logging disabled
+#define LOG(str, ...) \
+    do {              \
     } while (0)
 #elif defined UNTETHERDBG
-#define LOG(str, args...)                                                                                                                       \
+#define LOG(str, ...)                                                                                                                           \
     do {                                                                                                                                        \
-        NSLog(@"[%s] " str, __func__, ##args);                                                                                                  \
+        NSLog(@"[%@] " str, @(__func__), ##__VA_ARGS__);                                                                                        \
         CFOptionFlags flags;                                                                                                                    \
-        CFStringRef tmp = CFStringCreateWithFormat(NULL, NULL, (__bridge CFStringRef)(@"[%s] " str), __func__, ##args);                         \
+        CFStringRef tmp = CFStringCreateWithFormat(NULL, NULL, (__bridge CFStringRef)(@"[%@] " str), @(__func__), ##__VA_ARGS__);               \
         CFUserNotificationDisplayAlert(0, 0, NULL, NULL, NULL, CFSTR("spicy untether"), tmp, CFSTR("w00t"), CFSTR("Ok"), CFSTR("Nvm"), &flags); \
         CFRelease(tmp);                                                                                                                         \
         sleep(1);                                                                                                                               \
     } while (0)
 #else
-#define LOG(str, args...)                      \
-    do {                                       \
-        NSLog(@"[%s] " str, __func__, ##args); \
+#define LOG(str, ...)                                    \
+    do {                                                 \
+        NSLog(@"[%@] " str, @(__func__), ##__VA_ARGS__); \
     } while (0)
 #endif
 

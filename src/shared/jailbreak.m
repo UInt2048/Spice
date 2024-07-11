@@ -58,18 +58,6 @@ time_t bootsec(void)
     return boottime.tv_sec;
 }
 
-kern_return_t pwn_kernel(offsets_t* offsets, task_t* tfp0, kptr_t* kbase, void* controller, void (*sendLog)(void*, NSString*))
-{
-    if (offsets->flags & FLAG_SOCKET)
-        return pwn_kernel_socket(offsets, tfp0, kbase, controller, sendLog);
-    else if (offsets->flags & FLAG_VORTEX)
-        return pwn_kernel_vortex(offsets, tfp0, kbase, controller, sendLog);
-    else if (offsets->flags & FLAG_LIGHTSPEED)
-        return pwn_kernel_lightspeed(offsets, tfp0, kbase, controller, sendLog);
-    else
-        return KERN_INVALID_VALUE;
-}
-
 kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, NSString*))
 {
     offset_struct_t* myoffsets = malloc(sizeof(offset_struct_t));
@@ -105,7 +93,19 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     } else {
         // suspend_all_threads();
 
-        ret = pwn_kernel(&offs, &kernel_task, &kbase, controller, sendLog);
+        if (offs.flags & FLAG_SOCK_PORT) {
+            PWN_LOG("Selected sock_port exploit");
+            ret = pwn_kernel_sock_port(&offs, &kernel_task, &kbase, controller, sendLog);
+        } else if (offs.flags & FLAG_VORTEX) {
+            PWN_LOG("Selected v0rtex exploit");
+            ret = pwn_kernel_vortex(&offs, &kernel_task, &kbase, controller, sendLog);
+        } else if (offs.flags & FLAG_LIGHTSPEED) {
+            PWN_LOG("Selected lightspeed exploit");
+            ret = pwn_kernel_lightspeed(&offs, &kernel_task, &kbase, controller, sendLog);
+        } else {
+            PWN_LOG("Error: No exploit selected");
+            ret = KERN_INVALID_VALUE;
+        }
 
         // resume_all_threads();
 
