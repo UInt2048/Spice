@@ -25,6 +25,8 @@
 #include "offsets.h"
 #include <untether/offsets.h>
 
+#define TF_PLATFORM 0x400
+
 #define MACH(func)                                                                    \
     ret = func;                                                                       \
     if (ret != KERN_SUCCESS) {                                                        \
@@ -160,7 +162,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         VAL_CHECK(t_flags);
 
         PWN_LOG("current t_flags: %x", t_flags);
-        t_flags |= 0x400; // TF_PLATFORM
+        t_flags |= TF_PLATFORM; // TF_PLATFORM
 
         wk32(mytask + offs.struct_offsets.task_t_flags, t_flags);
         PWN_LOG("new t_flags: %x", t_flags);
@@ -257,7 +259,9 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         }
     }
 
-    BOOL attemptFlag = NO;
+    BOOL reinstallFlag = NO;
+    BOOL plistFlag = NO;
+    BOOL plistReturnFlag = NO;
     BOOL extractResult = YES;
 
 #define FIND_FAIL(path)                     \
@@ -322,11 +326,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     if (access("/usr/bin/killall", F_OK) != 0) {
                         PWN_LOG("Failed to access /usr/bin/killall");
                     attempt_bootstrap_fix:
-                        if (attemptFlag) {
+                        if (reinstallFlag) {
                             ret = KERN_FAILURE;
                             goto out;
                         } else {
-                            attemptFlag = YES;
+                            reinstallFlag = YES;
                             goto extract_bootstrap;
                         }
                     }
@@ -334,7 +338,13 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     ret = execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "-SIGSTOP", "cfprefsd", NULL });
                     if (ret == 85) /* Rejected by amfid */ {
                         PWN_LOG("failed to run unsigned binary?");
-                        goto attempt_bootstrap_fix;
+                        if (plistFlag) {
+                            ret = KERN_FAILURE;
+                            goto out;
+                        } else {
+                            plistFlag = YES;
+                            goto stage_18;
+                        }
                     } else if (ret != 0) {
                         PWN_LOG("failed to run killall(1): %d", ret);
                         ret = KERN_FAILURE;
@@ -367,6 +377,10 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                     PWN_LOG("done!");
                 }
+
+                if (plistReturnFlag) {
+                    goto stage_20;
+                }
             }
         } else if (access("/.spice_bootstrap_installed", F_OK) != 0) {
             PWN_LOG("big problem! we are in JBOPT_POST_ONLY mode but the bootstrap was not found!");
@@ -375,23 +389,18 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             PWN_LOG("JBOPT_POST_ONLY mode and bootstrap is present, all is well");
         }
     }
-    updateStage(18);
+
     {
         if ((opt & JBOPT_POST_ONLY) == 0) {
             if (access("/usr/libexec/substrate", F_OK) != 0 && access("/usr/lib/libsubstitute.dylib", F_OK) != 0) {
-                PWN_LOG("Warning: Substrate not found, returning to stage 17.");
-                updateStage(17);
+                PWN_LOG("Warning: Substrate not found, attempting to reinstall.");
                 goto install_substrate;
-            }
-
-            if ([[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"] objectForKey:@"SBShowNonDefaultSystemApps"] != [NSNumber numberWithBool:YES]) {
-                PWN_LOG("Warning: SBShowNonDefaultSystemApps not enabled, returning to stage 17.");
-                updateStage(17);
-                goto enable_sbshownondefaultsystemapps;
             }
         }
     }
 
+stage_18:
+    updateStage(18);
     {
         // handle substrate's unrestrict library
         if (access("/usr/libexec/substrate", F_OK) == 0) {
@@ -493,7 +502,18 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
          * before attempting to launch it
          * -- remember; it handles codesign patching
          */
+        if ((opt & JBOPT_POST_ONLY) == 0 &&
+            [[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"]
+                objectForKey:@"SBShowNonDefaultSystemApps"]
+                != [NSNumber numberWithBool:YES]) {
+            PWN_LOG("Warning: SBShowNonDefaultSystemApps not enabled, returning to stage 17.");
+            plistReturnFlag = YES;
+            updateStage(17);
+            goto enable_sbshownondefaultsystemapps;
+        }
     }
+
+stage_20:
     updateStage(20);
     {
         // TODO: copy/check for launchctl
