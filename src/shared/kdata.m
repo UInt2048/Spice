@@ -45,7 +45,7 @@ kern_return_t kdata_write(const void* data)
         kern_return_t ret = KERN_FAILURE;
         // TODO: call worker
         ret = KERN_SUCCESS;
-    out:;
+        // out:;
         return ret;
     } else // Non-SMAP devices
     {
@@ -62,7 +62,7 @@ kern_return_t kdata_read(void* buffer)
         // TODO: call worker
         ret = KERN_SUCCESS;
         bcopy((void*)kdata_shm, buffer, KDATA_SIZE);
-    out:;
+        // out:;
         return ret;
     } else // Non-SMAP devices
     {

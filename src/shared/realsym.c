@@ -200,6 +200,7 @@ uint64_t realsym(const char *file, const char *sym)
         cache_local_entry_t *local_entry = &local_entries[i];
 
         mach_hdr64_t *h64 = cache_get(&handle, local_entry->dylibOffset, sizeof(mach_hdr64_t));
+        mach_lc_t *lc = NULL;
         if(!h64) goto skip;
         if(h64->magic != MH_MAGIC_64) goto skip;
 
@@ -214,7 +215,7 @@ uint64_t realsym(const char *file, const char *sym)
             }
         }
 
-        mach_lc_t *lc = cache_get(&handle, local_entry->dylibOffset + sizeof(mach_hdr64_t), h64->sizeofcmds);
+        lc = cache_get(&handle, local_entry->dylibOffset + sizeof(mach_hdr64_t), h64->sizeofcmds);
         if(!lc) goto skip;
 
         for(mach_lc_t *cmd = lc, *end = (mach_lc_t*)((uintptr_t)lc + h64->sizeofcmds);

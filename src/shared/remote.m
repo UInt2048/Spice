@@ -111,8 +111,8 @@ uint64_t find_gadget_candidate(char** alternatives, size_t gadget_length)
     return 0;
 }
 
-uint64_t blr_x19_addr = 0;
-uint64_t find_blr_x19_gadget()
+static uint64_t blr_x19_addr = 0;
+uint64_t find_blr_x19_gadget(void)
 {
     if (blr_x19_addr != 0) {
         return blr_x19_addr;
@@ -337,7 +337,7 @@ int inject_library(pid_t pid, const char* path)
 
     printf("got task port: %x\n", task_port);
 
-    call_remote(task_port, dlopen, 2, REMOTE_CSTRING(path), REMOTE_LITERAL(RTLD_NOW));
+    call_remote(task_port, (void*)dlopen, 2, REMOTE_CSTRING(path), REMOTE_LITERAL(RTLD_NOW));
 
     return 0;
 }

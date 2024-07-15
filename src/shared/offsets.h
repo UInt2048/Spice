@@ -3,10 +3,8 @@
 
 #ifdef __LP64__
 typedef uint64_t kptr_t;
-#define OFF_IOUC_IPC 0x9c
 #else
 typedef uint32_t kptr_t;
-#define OFF_IOUC_IPC 0x5c
 #endif
 
 typedef uint64_t mach_port_poly_t; // We don't know what it is, but apparently a uint64_t works
@@ -175,5 +173,74 @@ bool populate_offsets(offsets_t* liboffsets, struct offset_struct* offsets);
 #else
 #define OFFSET_IP6PO_MINMTU 116
 #endif
+
+// For kcall.m
+#ifdef __LP64__
+#define OFFSET_IPC_PORT_IP_KOBJECT 0x68 // "ipc_kobject_server: strange destination rights", scroll up to case 2
+#define OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX 0xb7 // see offsets.m
+#else
+#define OFFSET_IPC_PORT_IP_KOBJECT 0x48 // "ipc_kobject_server: strange destination rights", scroll up to case 2
+#define OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX 0xe1 // see offsets.m
+#endif
+
+#define OFFSET_FAKE_CLIENT_ARGC 0x40
+#define OFFSET_FAKE_CLIENT_JUMP 0x48
+
+// For kents.m
+#define OFFSET_PROC_P_TEXTVP 0x248
+#define OFFSET_VNODE_V_UBCINFO 0x78
+#define OFFSET_UBCINFO_CSBLOBS 0x50
+#define OFFSET_CSBLOB_CSB_ENTITLEMENTS_BLOB 0x90
+#define OFFSET_CSBLOB_HEADER_LEN 0x8
+#define OFFSET_CSBLOB_LENGTH 0x4
+
+// For kutils.m
+#ifdef __LP64__
+#define OFFSET_PROC_NAME 0x268 // found in proc_name
+#define OFFSET_PROC_PID 0x10 // found in proc_name
+#define OFFSET_PROC_TASK 0x18
+#define OFFSET_TASK_ITK_SPACE 0x308
+#define OFFSET_ITK_SPACE_IS_TABLE /* note that itk_space == ipc_space */ 0x20
+#define SIZEOF_IPC_ENTRY_T 0x18 // division of 0x18 in loop below "the mig dispatch table is too small"
+#else
+#define OFFSET_PROC_NAME 0x180 // found in proc_name
+#define OFFSET_PROC_PID 0x8 // found in proc_name
+#define OFFSET_PROC_TASK 0xc
+#define OFFSET_TASK_ITK_SPACE 0x1e8
+#define OFFSET_ITK_SPACE_IS_TABLE 0x14
+#define SIZEOF_IPC_ENTRY_T 0x10 // right bitshift of 4 in loop below "the mig dispatch table is too small"
+#endif
+
+#define OFFSET_PROC_LE_PREV sizeof(kptr_t) // from the definition of LIST_ENTRY macro
+
+// For nonce.m
+#define OFFSET_SEARCH_NVRAM_PROP 0x590
+#define OFFSET_GET_OF_VARIABLE_PERM 0x558
+#define OFFSET_VTAB_SIZE 0x620
+#define OFFSET_IODTNVRAM_OBJ 0x68
+
+// For root_fs.m
+#define OFFSET_VNODE_V_MOUNT 0xd8
+#define OFFSET_V_MOUNT_V_FLAG 0x70
+#define OFFSET_VNODE_SPEC_INFO 0x78
+#define OFFSET_SPEC_INFO_FLAGS 0x10
+
+// For root.m
+// Note for understanding these:
+// typedef struct ucred *kauth_cred_t;
+// typedef struct posix_cred *posix_cred_t;
+
+#ifdef __LP64__
+#define OFFSET_PROC_P_UCRED 0x100 // ldr offset in kauth_proc_label_update after lck_mtx_lock
+#define OFFSET_UCRED_CR_POSIX 0x18 // found in kauth_cred_find
+#define OFFSET_UCRED_CR_LABEL 0x78 // found in kauth_cred_find
+#else
+#define OFFSET_PROC_P_UCRED 0x98 // ldr offset in kauth_proc_label_update after lck_mtx_lock
+#define OFFSET_UCRED_CR_POSIX 0xc // found in kauth_cred_find
+#define OFFSET_UCRED_CR_LABEL 0x6c // found in kauth_cred_find
+#endif
+
+#define OFFSET_AMFI_SLOT 0
+#define OFFSET_SANDBOX_SLOT 1
 
 #endif

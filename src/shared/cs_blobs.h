@@ -33,6 +33,8 @@
 
 #define CS_ENTITLEMENT_FLAGS (CS_GET_TASK_ALLOW | CS_INSTALLER)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-length-array"
 typedef struct __attribute__((packed)) {
     uint32_t magic; /* magic number (CSMAGIC_CODEDIRECTORY) */
     uint32_t length; /* total length of CodeDirectory blob */
@@ -70,6 +72,7 @@ typedef struct __attribute__((packed)) {
     uint64_t execSegFlags; /* executable segment flags */
     char end_withExecSeg[0];
 } CS_CodeDirectory;
+#pragma clang diagnostic pop
 
 typedef struct __attribute__((packed)) {
     uint32_t type; /* type of entry */
@@ -100,6 +103,8 @@ typedef struct __SC_Scatter {
 /*
  * Magic numbers used by Code Signing
  */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpedantic"
 enum {
     CSMAGIC_REQUIREMENT = 0xfade0c00, /* single Requirement blob */
     CSMAGIC_REQUIREMENTS = 0xfade0c01, /* Requirements vector (internal requirements) */
@@ -151,6 +156,7 @@ enum {
     CS_SIGNER_TYPE_UNKNOWN = 0,
     CS_SIGNER_TYPE_LEGACYVPN = 5,
 };
+#pragma clang diagnostic pop
 
 /*
  * Choose among different hash algorithms.

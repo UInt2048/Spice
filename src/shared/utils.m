@@ -15,7 +15,7 @@
 #include "utils.h"
 
 // credits to tihmstar
-void suspend_all_threads()
+void suspend_all_threads(void)
 {
     thread_act_t other_thread, current_thread;
     unsigned int thread_count;
@@ -41,7 +41,7 @@ void suspend_all_threads()
 }
 
 // credits to tihmstar
-void resume_all_threads()
+void resume_all_threads(void)
 {
     thread_act_t other_thread, current_thread;
     unsigned int thread_count;
@@ -62,7 +62,7 @@ void resume_all_threads()
     }
 }
 
-void respring()
+void respring(void)
 {
     execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "SpringBoard", NULL });
 }
@@ -84,7 +84,7 @@ int execprog(const char* prog, const char* args[])
 
     printf("spawning %s ( ", prog);
     for (const char** arg = args; *arg != NULL; ++arg) {
-        printf("%s ", (char*)*arg);
+        printf("%s ", *arg);
     }
     printf(") to logfile %s\n", logfile);
 
@@ -105,7 +105,10 @@ int execprog(const char* prog, const char* args[])
     }
 
     pid_t pd;
-    if ((rv = posix_spawn(&pd, prog, &child_fd_actions, NULL, (char**)args, NULL))) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+    if ((rv = posix_spawn(&pd, prog, &child_fd_actions, NULL, (char* const*)args, NULL))) {
+#pragma clang diagnostic pop
         printf("posix_spawn error: %d (%s)\n", rv, strerror(rv));
         return rv;
     }

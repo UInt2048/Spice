@@ -31,8 +31,8 @@ struct fat_arch_64 {
 };
 #endif
 
-#define ERROR(str, args...) LOG("ERROR: [%s] " str, __func__, ##args)
-#define INFO(str, args...) LOG("INFO: " str, ##args)
+#define ERROR(str, ...) LOG("ERROR: [%@] " str, @(__func__), ##__VA_ARGS__)
+#define INFO(str, ...) LOG("INFO: " str, ##__VA_ARGS__)
 
 int inject_trust(const char* path)
 {
@@ -49,7 +49,7 @@ int inject_trust(const char* path)
         return -1;
     }
 
-    int num_found_hashes = 0;
+    size_t num_found_hashes = 0;
     void* hash_array = NULL;
 
     uint32_t magic;
@@ -67,7 +67,7 @@ int inject_trust(const char* path)
         if (cd_hash != NULL) {
             num_found_hashes++;
             hash_array = realloc(hash_array, num_found_hashes * CS_CDHASH_LEN);
-            memcpy(hash_array + ((num_found_hashes - 1) * CS_CDHASH_LEN), cd_hash, CS_CDHASH_LEN);
+            memcpy((void*)((kptr_t)hash_array + ((num_found_hashes - 1) * CS_CDHASH_LEN)), cd_hash, CS_CDHASH_LEN);
         }
     } else if (magic == FAT_MAGIC || magic == FAT_MAGIC_64 || magic == FAT_CIGAM || magic == FAT_CIGAM_64) {
         struct fat_header header;
@@ -76,16 +76,16 @@ int inject_trust(const char* path)
             swap_fat_header(&header, 0);
 
         int arch_offset = sizeof(header);
-        for (int i = 0; i < header.nfat_arch; i++) {
+        for (uint32_t i = 0; i < header.nfat_arch; i++) {
             struct fat_arch arch;
             fseek(fd, arch_offset, 0);
             fread(&arch, sizeof(struct fat_arch), 1, fd);
             if (is_swap)
                 swap_fat_arch(&arch, 1, 0);
 
-            fseek(fd, arch.offset, 0);
+            fseek(fd, (long)arch.offset, 0);
 
-            uint32_t magic;
+            magic = 0;
             fread(&magic, sizeof(magic), 1, fd);
 
             if (magic == MH_MAGIC || magic == MH_MAGIC_64 || magic == MH_CIGAM || magic == MH_CIGAM_64) {
@@ -94,7 +94,7 @@ int inject_trust(const char* path)
                 if (cd_hash != NULL) {
                     num_found_hashes++;
                     hash_array = realloc(hash_array, num_found_hashes * CS_CDHASH_LEN);
-                    memcpy(hash_array + ((num_found_hashes - 1) * CS_CDHASH_LEN), cd_hash, CS_CDHASH_LEN);
+                    memcpy((void*)((kptr_t)hash_array + ((num_found_hashes - 1) * CS_CDHASH_LEN)), cd_hash, CS_CDHASH_LEN);
                 }
             }
 
@@ -111,29 +111,33 @@ int inject_trust(const char* path)
 
     LOG("found %d hashes to inject", num_found_hashes);
 
-    int total_hashes_size = num_found_hashes * sizeof(hash_t);
-    int total_struct_size = sizeof(struct trust_chain) + total_hashes_size;
+    size_t total_hashes_size = num_found_hashes * sizeof(hash_t);
+    size_t total_struct_size = sizeof(struct trust_chain) + total_hashes_size;
     struct trust_chain* chain_buf = (struct trust_chain*)malloc(total_struct_size);
 
     chain_buf->next = rk64(offs.data.trust_cache + kernel_slide);
-    *(uint64_t*)&chain_buf->uuid[0] = 0xabadbabeabadbabe;
-    *(uint64_t*)&chain_buf->uuid[8] = 0xabadbabeabadbabe;
+    for (int i = 0; i < 16; i += 4) {
+        chain_buf->uuid[i + 0] = 0xab;
+        chain_buf->uuid[i + 1] = 0xad;
+        chain_buf->uuid[i + 2] = 0xba;
+        chain_buf->uuid[i + 3] = 0xbe;
+    }
     chain_buf->count = num_found_hashes;
 
     memcpy(chain_buf->hash, hash_array, total_hashes_size);
 
-    for (int i = 0; i < num_found_hashes; i++) {
+    for (size_t i = 0; i < num_found_hashes; i++) {
         char msg[(sizeof(hash_t) * 2) + 1];
         bzero(msg, sizeof(msg));
 
         char* ptr = msg;
-        for (int j = 0; j < sizeof(hash_t); j += sizeof(uint32_t)) {
-            ptr += sprintf(ptr, "%x", ntohl(*(uint32_t*)&chain_buf->hash[i][j]));
+        for (size_t j = 0; j < sizeof(hash_t); j += sizeof(char)) {
+            ptr += sprintf(ptr, "%x", ntohl(*(char*)&chain_buf->hash[i][j]));
         }
         LOG("got cdhash (%d): %s", i, msg);
     }
 
-    uint64_t kernel_trust = kalloc(total_struct_size);
+    kptr_t kernel_trust = kalloc(total_struct_size);
     kwrite(kernel_trust, chain_buf, total_struct_size);
     wk64(offs.data.trust_cache + kernel_slide, kernel_trust);
 
@@ -185,7 +189,7 @@ void* put_dick_in_macho(const char* path, uint64_t file_off)
 // Finds the LC_CODE_SIGNATURE load command
 const uint8_t* find_code_signature(img_info_t* info, uint32_t* cs_size)
 {
-#define _LOG_ERROR(str, args...) ERROR("(%s) " str, info->name, ##args)
+#define _LOG_ERROR(str, ...) ERROR("(%s) " str, info->name, ##__VA_ARGS__)
     if (info == NULL || info->addr == NULL) {
         return NULL;
     }
@@ -217,7 +221,7 @@ const uint8_t* find_code_signature(img_info_t* info, uint32_t* cs_size)
     }
 
     const struct load_command* cmd = (const struct load_command*)((uintptr_t)info->addr + sizeofmh);
-    for (int i = 0; i != mh->ncmds; ++i) {
+    for (uint32_t i = 0; i != mh->ncmds; ++i) {
         if (cmd->cmd == LC_CODE_SIGNATURE) {
             const struct linkedit_data_command* cscmd = (const struct linkedit_data_command*)cmd;
             if (cscmd->dataoff + cscmd->datasize > info->size) {
@@ -262,7 +266,7 @@ int find_best_codedir(const void* csblob, uint32_t blob_size, const CS_CodeDirec
 
     if (ntohl(blob->magic) == CSMAGIC_EMBEDDED_SIGNATURE) {
         const CS_CodeDirectory* best_cd = NULL;
-        int best_rank = 0;
+        unsigned int best_rank = 0;
 
         const CS_SuperBlob* sb = (const CS_SuperBlob*)csblob;
         uint32_t count = ntohl(sb->count);
@@ -272,7 +276,7 @@ int find_best_codedir(const void* csblob, uint32_t blob_size, const CS_CodeDirec
             return 1;
         }
 
-        for (int n = 0; n < count; n++) {
+        for (uint32_t n = 0; n < count; n++) {
             const CS_BlobIndex* blobIndex = &sb->index[n];
 
             uint32_t type = ntohl(blobIndex->type);
@@ -376,15 +380,13 @@ const char* get_hash_name(uint8_t hash_type)
         return "SHA384";
 
     default:
-        return "UNKNWON";
+        return "UNKNOWN";
     }
-
-    return "";
 }
 
 int open_img(img_info_t* info)
 {
-#define _LOG_ERROR(str, args...) ERROR("(%s) " str, info->name, ##args)
+#define _LOG_ERROR(str, ...) ERROR("(%s) " str, info->name, ##__VA_ARGS__)
     int ret = -1;
 
     if (info == NULL) {
@@ -411,7 +413,7 @@ int open_img(img_info_t* info)
     }
 
     size_t fsize = s.st_size;
-    info->size = fsize - info->file_off;
+    info->size = fsize - (size_t)info->file_off;
     const void* map = mmap(NULL, fsize, PROT_READ, MAP_PRIVATE, info->fd, 0);
 
     if (map == MAP_FAILED) {
@@ -440,7 +442,7 @@ void close_img(img_info_t* info)
 
     if (info->addr != NULL) {
         const void* map = (void*)((uintptr_t)info->addr - info->file_off);
-        size_t fsize = info->size + info->file_off;
+        size_t fsize = (size_t)(info->size + info->file_off);
 
         munmap((void*)map, fsize);
     }
