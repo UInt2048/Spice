@@ -11,9 +11,13 @@ typedef uint32_t kptr_t;
 
 typedef uint64_t mach_port_poly_t; // We don't know what it is, but apparently a uint64_t works
 
+#define FLAG_VERIFIED (1 << 0)
+#define FLAG_LIGHTSPEED (1 << 1)
+#define FLAG_VORTEX (1 << 2)
+#define FLAG_SOCKET (1 << 3)
+
 typedef struct {
     struct {
-        bool verified;
         kptr_t old_cache_addr;
         kptr_t new_cache_addr;
         kptr_t kernel_image_base;
@@ -74,6 +78,53 @@ typedef struct {
         uint32_t set_value;
     } iosurface;
 
+    uint32_t flags;
+
+    struct {
+        // Structure offsets
+        kptr_t task_bsd_info;
+        kptr_t proc_ucred;
+#ifdef __LP64__
+        kptr_t vm_map_hdr;
+#endif
+        kptr_t realhost_special;
+        kptr_t iouserclient_ipc;
+        kptr_t vtab_get_retain_count;
+        kptr_t vtab_get_external_trap_for_index;
+        // Data
+        kptr_t kernel_map;
+        // Code
+        kptr_t chgproccnt;
+        kptr_t kauth_cred_ref;
+        kptr_t osserializer_serialize;
+#ifdef __LP64__
+        kptr_t rop_ldr_x0_x0_0x10;
+#else
+        kptr_t rop_ldr_r0_r0_0xc;
+#endif
+    } vortex;
+
+    struct {
+        uint32_t task_vm_map;
+        uint32_t task_prev;
+        uint32_t task_itk_space;
+        uint32_t task_bsd_info;
+
+        uint32_t ipc_port_ip_receiver;
+        uint32_t ipc_port_ip_kobject;
+
+        uint32_t proc_pid;
+        uint32_t proc_p_fd;
+
+        uint32_t filedesc_fd_ofiles;
+        uint32_t fileproc_f_fglob;
+        uint32_t fileglob_fg_data;
+
+        uint32_t pipe_buffer;
+        uint32_t ipc_space_is_table;
+        uint32_t size_ipc_entry;
+    } socket;
+
 #ifndef IOKIT_H
 #define io_connect_t mach_port_t
 #define task_t mach_port_t
@@ -86,7 +137,7 @@ typedef struct {
         // void (*write) (int fd,void * buf,uint64_t size); // unused, dlsym of _write
         kern_return_t (*IOConnectTrap6)(io_connect_t connect, uint32_t selector, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6);
         kern_return_t (*mach_ports_lookup)(task_t target_task, mach_port_array_t init_port_set, mach_msg_type_number_t* init_port_count);
-        mach_port_name_t (*mach_task_self)();
+        mach_port_name_t (*mach_task_self)(void);
         kern_return_t (*mach_vm_remap)(vm_map_t target_task, mach_vm_address_t* target_address, mach_vm_size_t size, mach_vm_offset_t mask, int flags, vm_map_t src_task, mach_vm_address_t src_address, boolean_t copy, vm_prot_t* cur_protection, vm_prot_t* max_protection, vm_inherit_t inheritance);
         kern_return_t (*mach_port_destroy)(ipc_space_t task, mach_port_name_t name);
         kern_return_t (*mach_port_deallocate)(ipc_space_t task, mach_port_name_t name);
@@ -106,7 +157,7 @@ typedef struct {
 #endif
 } offsets_t;
 
-uint32_t get_anchor();
+uint32_t get_anchor(void);
 typedef struct offset_struct offset_struct_t;
 bool populate_offsets(offsets_t* liboffsets, struct offset_struct* offsets);
 

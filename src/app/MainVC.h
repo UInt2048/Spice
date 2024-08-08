@@ -1,7 +1,7 @@
 #ifndef MAINVC_H
 #define MAINVC_H
 #import <UIKit/UIKit.h>
-NSString* deviceName();
+NSString* deviceName(void);
 
 @interface MainVC : UIViewController
 
