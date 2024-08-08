@@ -11,11 +11,12 @@ APP              = $(BIN)/Payload/$(TARGET_GUI).app
 SRC_ALL          = src/shared
 SRC_CLI          = src/untether
 SRC_GUI          = src/app
+SRC_PWN          = src/exploit
 
 PAYLOAD          = $(SRC_CLI)/generated/lol.spyware.spiceuntether_1.0.160_iphoneos-arm.deb
 NO_UNTETHER     := $(SRC_CLI)/stage3.m $(SRC_CLI)/stage4.m $(SRC_CLI)/generator.m # These are only pre-dependencies
 UNTETHER_SRC    := $(filter-out $(NO_UNTETHER),$(wildcard $(SRC_CLI)/*.m))
-FORMAT_SRC      := $(filter-out $(SRC_ALL)/offsets.m,$(wildcard $(SRC_ALL)/*.h $(SRC_ALL)/*.m $(SRC_CLI)/*.h $(SRC_CLI)/*.m $(SRC_CLI)/*.c $(SRC_GUI)/*.h $(SRC_GUI)/*.m))
+FORMAT_SRC      := $(filter-out $(SRC_ALL)/offsets.m,$(wildcard $(SRC_ALL)/*.h $(SRC_ALL)/*.m $(SRC_CLI)/*.h $(SRC_CLI)/*.m $(SRC_CLI)/*.c $(SRC_GUI)/*.h $(SRC_GUI)/*.m $(SRC_PWN)/*.h $(SRC_PWN)/*.m))
 JAKE             = submodules/libjake
 ifdef RELEASE
 IPA              = $(TARGET_GUI).ipa
@@ -99,12 +100,12 @@ $(SRC_CLI)/compile_stage4.sh:
 $(SRC_CLI)/generated/stage2_hash3.h: $(SRC_CLI)/stage3.m $(SRC_CLI)/compile_stage3.sh
 	bash $(SRC_CLI)/compile_stage3.sh
 
-$(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/compile_stage4.sh $(JAKE)/libjake.a
+$(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_PWN)/*.m $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/compile_stage4.sh $(JAKE)/libjake.a
 	bash $(SRC_CLI)/compile_stage4.sh
 
 $(SRC_CLI)/install.m: $(SRC_ALL)/offsets.h $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/install_stage3_offsets.h
 
-$(SRC_CLI)/stage2.m: $(SRC_ALL)/*.c $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.entitlements $(SRC_CLI)/compile_stage2.sh
+$(SRC_CLI)/stage2.m: $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.entitlements $(SRC_CLI)/compile_stage2.sh
 	bash $(SRC_CLI)/compile_stage2.sh $(STAGE_2_FLAGS)
 
 $(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.m $(SRC_CLI)/control $(SRC_CLI)/postinst
@@ -115,7 +116,7 @@ $(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_
 	mkdir -p $(SRC_CLI)/generated/package/spice && cp $(SRC_CLI)/generated/stage4 $(SRC_CLI)/generated/package/spice/stage4
 	find . -name ".DS_Store" -delete && dpkg-deb -b $(SRC_CLI)/generated/package && dpkg-name $(SRC_CLI)/generated/package.deb
 
-$(APP)/$(TARGET_GUI): $(SRC_GUI)/*.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a $(SRC_CLI)/uland_offsetfinder.m | $(APP)
+$(APP)/$(TARGET_GUI): $(SRC_GUI)/*.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_PWN)/*.m $(JAKE)/libjake.a $(SRC_CLI)/uland_offsetfinder.m | $(APP)
 	$(IGCC) $(ARCH_GUI) $(UNTETHER_FLAGS) -o $@ -Wl,-exported_symbols_list,res/app.txt $(IGCC_FLAGS) $^
 
 $(APP)/Info.plist: $(RES)/Info.plist | $(APP)
@@ -133,7 +134,7 @@ $(APP):
 $(APP)/Base.lproj:
 	mkdir -p $@
 
-$(UNTETHER): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a | $(SRC_ALL)/offsets.h $(PAYLOAD)
+$(UNTETHER): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_PWN)/*.m $(JAKE)/libjake.a | $(SRC_ALL)/offsets.h $(PAYLOAD)
 	$(IGCC) $(ARCH_CLI) $(UNTETHER_FLAGS) -shared -o $@ -Wl,-exported_symbols_list,res/untether.txt $(IGCC_FLAGS) $(STAGE_2_FLAGS) $^
 	$(SIGN) $(SIGN_FLAGS) $@
 

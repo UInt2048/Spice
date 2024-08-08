@@ -14,7 +14,7 @@ typedef uint64_t mach_port_poly_t; // We don't know what it is, but apparently a
 #define FLAG_VERIFIED (1 << 0)
 #define FLAG_LIGHTSPEED (1 << 1)
 #define FLAG_VORTEX (1 << 2)
-#define FLAG_SOCKET (1 << 3)
+#define FLAG_SOCK_PORT (1 << 3)
 
 typedef struct {
     struct {
