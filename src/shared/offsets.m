@@ -21,8 +21,8 @@ NSString* deviceName(void)
     ([SYSTEM_VERSION() compare:v options:NSNumericSearch] == NSOrderedSame)
 // #define SYSTEM_VERSION_GREATER_THAN(v) \
 //     ([SYSTEM_VERSION() compare:v options:NSNumericSearch] == NSOrderedDescending)
-// #define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v) \
-//     ([SYSTEM_VERSION() compare:v options:NSNumericSearch] != NSOrderedAscending)
+#define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v) \
+    ([SYSTEM_VERSION() compare:v options:NSNumericSearch] != NSOrderedAscending)
 // #define SYSTEM_VERSION_LESS_THAN(v) \
 //     ([SYSTEM_VERSION() compare:v options:NSNumericSearch] == NSOrderedAscending)
 // #define SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(v) \
@@ -80,7 +80,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
 #ifdef __LP64__
     if (DEVICE_EQUAL_TO(@"iPad5,1") && SYSTEM_VERSION_EQUAL_TO(@"11.1.2")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -157,7 +157,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075898bc; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPad5,1") && SYSTEM_VERSION_EQUAL_TO(@"11.2.1")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -234,7 +234,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075958c4; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPhone6,1") && SYSTEM_VERSION_EQUAL_TO(@"11.2.6")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -312,7 +312,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075898c4; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPhone7,1") && SYSTEM_VERSION_EQUAL_TO(@"11.2.6")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -390,7 +390,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075958c4; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPhone8,4") && SYSTEM_VERSION_EQUAL_TO(@"11.3")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -468,7 +468,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075a98cc; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPad5,1") && SYSTEM_VERSION_EQUAL_TO(@"11.3.1")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -545,7 +545,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075b18cc; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPhone8,2") && SYSTEM_VERSION_EQUAL_TO(@"11.3.1")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -625,7 +625,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075a98cc; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPhone7,2") && SYSTEM_VERSION_EQUAL_TO(@"11.4")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -703,7 +703,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075b18cc; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPhone8,4") && SYSTEM_VERSION_EQUAL_TO(@"11.4")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_VERIFIED | FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -781,7 +781,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075ad8cc; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     } else if (DEVICE_EQUAL_TO(@"iPhone8,4") && SYSTEM_VERSION_EQUAL_TO(@"11.4.1")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_LIGHTSPEED;
+        liboffsets->flags                                   = FLAG_SOCK_PORT | FLAG_LIGHTSPEED;
         liboffsets->constant.old_cache_addr                 = 0x180000000; // static (SHARED_REGION_BASE_ARM64 in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x1c0000000; // static (SHARED_REGION_SIZE_ARM64 is 0x40000000 until iOS 12)
         liboffsets->constant.kernel_image_base              = 0xfffffff007004000; // static
@@ -861,7 +861,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
 #else
     if (DEVICE_EQUAL_TO(@"iPhone5,1") && SYSTEM_VERSION_EQUAL_TO(@"10.3.4")) {
         foundOffsets                                        = true; // These offsets exist
-        liboffsets->flags                                   = FLAG_SOCKET;
+        liboffsets->flags                                   = FLAG_SOCK_PORT;
         liboffsets->constant.old_cache_addr                 = 0x1a000000; // static (SHARED_REGION_BASE_ARM in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x40000000; // static (SHARED_REGION_SIZE_ARM is 0x26000000)
         liboffsets->constant.kernel_image_base              = 0x80001000; // static
@@ -968,6 +968,72 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0x80394f91; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     }
 #endif
+
+// Socket offsets for 64-bit (TODO: verify)
+#ifdef __LP64__
+    if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"12.0")) {
+        printf("[i] offsets selected for iOS 12.0 or above\n");
+        liboffsets->socket.task_vm_map    = 0x20;
+        liboffsets->socket.task_prev      = 0x30;
+        liboffsets->socket.task_itk_space = 0x300;
+#if __arm64e__
+        liboffsets->socket.task_bsd_info = 0x368;
+#else
+        liboffsets->socket.task_bsd_info = 0x358;
+#endif
+        liboffsets->socket.ipc_port_ip_receiver = 0x60;
+        liboffsets->socket.ipc_port_ip_kobject  = 0x68;
+        liboffsets->socket.proc_pid             = 0x60;
+        liboffsets->socket.proc_p_fd            = 0x100;
+        liboffsets->socket.filedesc_fd_ofiles   = 0x0;
+        liboffsets->socket.fileproc_f_fglob     = 0x8;
+        liboffsets->socket.fileglob_fg_data     = 0x38;
+        liboffsets->socket.pipe_buffer          = 0x10;
+        liboffsets->socket.ipc_space_is_table   = 0x20;
+        liboffsets->socket.size_ipc_entry       = 0x18;
+        liboffsets->iosurface.create_outsize    = 0xdd0;
+    } else if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"11.0")) {
+        liboffsets->socket.task_vm_map          = 0x20;
+        liboffsets->socket.task_prev            = 0x30;
+        liboffsets->socket.task_itk_space       = 0x308;
+        liboffsets->socket.task_bsd_info        = 0x368;
+        liboffsets->socket.ipc_port_ip_receiver = 0x60;
+        liboffsets->socket.ipc_port_ip_kobject  = 0x68;
+        liboffsets->socket.proc_pid             = 0x10;
+        liboffsets->socket.proc_p_fd            = 0x108;
+        liboffsets->socket.filedesc_fd_ofiles   = 0x0;
+        liboffsets->socket.fileproc_f_fglob     = 0x8;
+        liboffsets->socket.fileglob_fg_data     = 0x38;
+        liboffsets->socket.pipe_buffer          = 0x10;
+        liboffsets->socket.ipc_space_is_table   = 0x20;
+        liboffsets->socket.size_ipc_entry       = 0x18;
+        if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"11.1")) {
+            printf("[i] offsets selected for iOS 11.1 or above\n");
+            liboffsets->iosurface.create_outsize = 0xbc8;
+        } else {
+            printf("[i] offsets selected for iOS 11.0 to 11.0.3\n");
+            liboffsets->iosurface.create_outsize = 0x6c8;
+        }
+    } else if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"10.0")) {
+        printf("[i] offsets selected for iOS 10.x\n");
+        liboffsets->socket.task_vm_map          = 0x20;
+        liboffsets->socket.task_prev            = 0x30;
+        liboffsets->socket.task_itk_space       = 0x300;
+        liboffsets->socket.task_bsd_info        = 0x360;
+        liboffsets->socket.ipc_port_ip_receiver = 0x60;
+        liboffsets->socket.ipc_port_ip_kobject  = 0x68;
+        liboffsets->socket.proc_pid             = 0x10;
+        liboffsets->socket.proc_p_fd            = 0x108;
+        liboffsets->socket.filedesc_fd_ofiles   = 0x0;
+        liboffsets->socket.fileproc_f_fglob     = 0x8;
+        liboffsets->socket.fileglob_fg_data     = 0x38;
+        liboffsets->socket.pipe_buffer          = 0x10;
+        liboffsets->socket.ipc_space_is_table   = 0x20;
+        liboffsets->socket.size_ipc_entry       = 0x18;
+        liboffsets->iosurface.create_outsize    = 0x3c8;
+    }
+#endif
+
     return foundOffsets;
 }
 #pragma clang diagnostic pop
