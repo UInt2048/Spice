@@ -41,7 +41,10 @@ enum {
     kOSSerializeTypeMask = 0x7F000000U,
     kOSSerializeDataMask = 0x00FFFFFFU,
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpedantic"
     kOSSerializeEndCollection = 0x80000000U,
+#pragma clang diagnostic pop
 
     kOSSerializeMagic = 0x000000d3U,
 };

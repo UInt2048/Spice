@@ -33,6 +33,9 @@ copy_data(struct archive* ar, struct archive* aw)
     }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdirect-ivar-access"
+
 @implementation ArchiveFile {
     NSMutableDictionary* _files;
     int _fd;
@@ -461,3 +464,5 @@ out:
 }
 
 @end
+
+#pragma clang diagnostic pop
