@@ -32,7 +32,7 @@ typedef struct {
     mach_msg_type_number_t scalar_outputCnt;
     mach_vm_address_t ool_output;
     mach_vm_size_t ool_output_size;
-} MEMLEAK_Request __attribute__((unused));
+} MEMLEAK_Request;
 typedef struct {
     mach_msg_header_t Head;
     NDR_record_t NDR;
@@ -43,13 +43,39 @@ typedef struct {
     /*io_user_scalar_t scalar_output[16];*/
     mach_vm_size_t ool_output_size;
     mach_msg_trailer_t trailer;
-} MEMLEAK_Reply __attribute__((unused));
+} MEMLEAK_Reply;
 #pragma pack()
 
 union {
     MEMLEAK_Request In;
     MEMLEAK_Reply Out;
 } MEMLEAK_msg;
+
+#ifndef _STRUCT_ARM_THREAD_STATE
+#define _STRUCT_ARM_THREAD_STATE struct __darwin_arm_thread_state
+_STRUCT_ARM_THREAD_STATE
+{
+    __uint32_t __r[13]; /* General purpose register r0-r12 */
+    __uint32_t __sp; /* Stack pointer r13 */
+    __uint32_t __lr; /* Link register r14 */
+    __uint32_t __pc; /* Program counter r15 */
+    __uint32_t __cpsr; /* Current program status register */
+};
+#endif
+
+#ifndef _STRUCT_ARM_THREAD_STATE64
+#define _STRUCT_ARM_THREAD_STATE64 struct __darwin_arm_thread_state64
+_STRUCT_ARM_THREAD_STATE64
+{
+    __uint64_t __x[29]; /* General purpose registers x0-x28 */
+    __uint64_t __fp; /* Frame pointer x29 */
+    __uint64_t __lr; /* Link register x30 */
+    __uint64_t __sp; /* Stack pointer x31 */
+    __uint64_t __pc; /* Program counter */
+    __uint32_t __cpsr; /* Current program status register */
+    __uint32_t __pad; /* Same size for 32-bit or 64-bit clients */
+};
+#endif
 
 // fake port struct defined as volatile because on none smap devs we will place it into userland
 typedef volatile struct {

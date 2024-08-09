@@ -246,8 +246,8 @@ kptr_t kexecute(kptr_t addr, int n_args, ...)
         args[0] = 0x1;
     }
 
-    wk64(fake_client + OFFSET_FAKE_CLIENT_ARGC, args[0]);
-    wk64(fake_client + OFFSET_FAKE_CLIENT_JUMP, addr + kernel_slide);
+    wk64(fake_client + OFFSET_IOEXTERNALTRAP_OBJECT, args[0]);
+    wk64(fake_client + OFFSET_IOEXTERNALTRAP_FUNC, addr + kernel_slide);
 
     return (kptr_t)IOConnectTrap6(user_client, 0, args[1], args[2], args[3], args[4], args[5], args[6]);
 }

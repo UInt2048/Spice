@@ -7,6 +7,12 @@
 #include "common.h"
 
 #define JBOPT_POST_ONLY (1 << 0) /* post-exploitation only */
+#define JBOPT_EXPLOIT_AUTO (1 << 1)
+
+// Duplicated in offsets.h
+#define FLAG_LIGHTSPEED (1 << 2)
+#define FLAG_VORTEX (1 << 3)
+#define FLAG_SOCK_PORT (1 << 4)
 
 extern offsets_t offs;
 

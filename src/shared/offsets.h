@@ -10,9 +10,10 @@ typedef uint32_t kptr_t;
 typedef uint64_t mach_port_poly_t; // We don't know what it is, but apparently a uint64_t works
 
 #define FLAG_VERIFIED (1 << 0)
-#define FLAG_LIGHTSPEED (1 << 1)
-#define FLAG_VORTEX (1 << 2)
-#define FLAG_SOCK_PORT (1 << 3)
+// #define FLAG_RESERVED (1 << 1)
+#define FLAG_LIGHTSPEED (1 << 2)
+#define FLAG_VORTEX (1 << 3)
+#define FLAG_SOCK_PORT (1 << 4)
 
 typedef struct {
     struct {
@@ -40,6 +41,7 @@ typedef struct {
     } funcs;
 
     struct {
+        // Note: Technically this should be adds_r0_bx_lr on 32-bit but it's similar enough
         kptr_t add_x0_x0_ret; // formerly duplicate
     } gadgets;
 
@@ -178,13 +180,14 @@ bool populate_offsets(offsets_t* liboffsets, struct offset_struct* offsets);
 #ifdef __LP64__
 #define OFFSET_IPC_PORT_IP_KOBJECT 0x68 // "ipc_kobject_server: strange destination rights", scroll up to case 2
 #define OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX 0xb7 // see offsets.m
+#define OFFSET_IOEXTERNALTRAP_OBJECT 0x40 // the offset used by our gadget
 #else
 #define OFFSET_IPC_PORT_IP_KOBJECT 0x48 // "ipc_kobject_server: strange destination rights", scroll up to case 2
 #define OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX 0xe1 // see offsets.m
+#define OFFSET_IOEXTERNALTRAP_OBJECT 0x30 // the offset used by our gadget
 #endif
 
-#define OFFSET_FAKE_CLIENT_ARGC 0x40
-#define OFFSET_FAKE_CLIENT_JUMP 0x48
+#define OFFSET_IOEXTERNALTRAP_FUNC OFFSET_IOEXTERNALTRAP_OBJECT + sizeof(kptr_t) // + sizeof(kptr_t)
 
 // For kents.m
 #define OFFSET_PROC_P_TEXTVP 0x248

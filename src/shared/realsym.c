@@ -226,8 +226,9 @@ uint64_t realsym(const char *file, const char *sym)
             {
                 mach_stab_t *stab = (mach_stab_t*)cmd;
                 nlist64_t *syms = cache_get(&handle, stab->symoff, sizeof(nlist64_t) * stab->nsyms);
+                char *strs = NULL;
                 if(!syms) goto next;
-                char *strs = cache_get(&handle, stab->stroff, stab->strsize);
+                *strs = cache_get(&handle, stab->stroff, stab->strsize);
                 if(!strs) goto next;
                 for(size_t n = 0; n < stab->nsyms; ++n)
                 {

