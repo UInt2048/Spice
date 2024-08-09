@@ -134,7 +134,7 @@ int inject_trust(const char* path)
         for (size_t j = 0; j < sizeof(hash_t); j += sizeof(char)) {
             ptr += sprintf(ptr, "%x", ntohl(*(char*)&chain_buf->hash[i][j]));
         }
-        LOG("got cdhash (%d): %s", i, msg);
+        LOG("got cdhash (%zu): %s", i, msg);
     }
 
     kptr_t kernel_trust = kalloc(total_struct_size);

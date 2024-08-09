@@ -32,13 +32,17 @@
     if (ret != KERN_SUCCESS) {                                                        \
         LOG(#func " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret)); \
         goto out;                                                                     \
+    } else {                                                                          \
+        LOG("Successfully executed " #func);                                          \
     }
 
-#define VAL_CHECK(value)                                    \
-    if ((value) == 0x0) {                                   \
-        LOG("(ln.%d)failed to find " #value "!", __LINE__); \
-        ret = KERN_FAILURE;                                 \
-        goto out;                                           \
+#define VAL_CHECK(value)                                     \
+    if ((value) == 0x0) {                                    \
+        LOG("(ln.%d) failed to find " #value "!", __LINE__); \
+        ret = KERN_FAILURE;                                  \
+        goto out;                                            \
+    } else {                                                 \
+        LOG("(ln.%d) found " #value, __LINE__);              \
     }
 
 offsets_t offs;

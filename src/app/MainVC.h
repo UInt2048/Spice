@@ -20,4 +20,5 @@ NSString* deviceName(void);
 - (void)exploitFailed;
 
 @end
+
 #endif

@@ -53,20 +53,20 @@ pid_t get_pid_for_name(const char* name)
 kptr_t task_self_addr(void)
 {
     kptr_t self_proc = find_proc(getpid());
-    LOG("got self_proc = %llx\n", self_proc);
+    LOG("got self_proc = " ADDR "\n", self_proc);
 
-    return rk64(self_proc + OFFSET_PROC_TASK);
+    return kread_kptr(self_proc + OFFSET_PROC_TASK);
 }
 
 kptr_t find_port_address(mach_port_name_t port)
 {
     kptr_t task_port_addr = task_self_addr();
 
-    kptr_t itk_space = rk64(task_port_addr + OFFSET_TASK_ITK_SPACE); // task_t::itk_space
+    kptr_t itk_space = kread_kptr(task_port_addr + OFFSET_TASK_ITK_SPACE); // task_t::itk_space
 
-    kptr_t is_table = rk64(itk_space + OFFSET_ITK_SPACE_IS_TABLE);
+    kptr_t is_table = kread_kptr(itk_space + OFFSET_ITK_SPACE_IS_TABLE);
 
     uint32_t port_index = port >> 8;
 
-    return rk64(is_table + (port_index * SIZEOF_IPC_ENTRY_T));
+    return kread_kptr(is_table + (port_index * SIZEOF_IPC_ENTRY_T));
 }

@@ -142,7 +142,7 @@ void* lcconf_addr(void)
 size_t get_cache_maxslide(void)
 {
     kptr_t cache_slide = (kptr_t)cache_img->map + 30 * 8;
-    LOG("Cache maxslide: 0x%llx\n", cache_slide);
+    LOG("Cache maxslide: " ADDR "\n", cache_slide);
     return cache_slide;
 }
 
