@@ -1,5 +1,8 @@
-#include <stdio.h>
+#ifndef CODESIGN_H
+#define CODESIGN_H
+#include "cs_blobs.h"
 #include <stdint.h>
+#include <stdio.h>
 
 typedef struct {
     const char *name;
@@ -29,3 +32,4 @@ int hash_code_directory(const CS_CodeDirectory *directory, uint8_t hash[CS_CDHAS
 const char *get_hash_name(uint8_t hash_type);
 int open_img(img_info_t* info);
 void close_img(img_info_t* info);
+#endif
