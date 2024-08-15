@@ -17,6 +17,20 @@
 #include "jailbreak.h"
 #include "kmem.h"
 
+#ifndef FAT_MAGIC_64 // Old copies of <mach-o/fat.h> don't have this
+#define FAT_MAGIC_64 0xcafebabf
+#define FAT_CIGAM_64 0xbfbafeca /* NXSwapLong(FAT_MAGIC_64) */
+
+struct fat_arch_64 {
+    cpu_type_t cputype; /* cpu specifier (int) */
+    cpu_subtype_t cpusubtype; /* machine specifier (int) */
+    uint64_t offset; /* file offset to this object file */
+    uint64_t size; /* size of this object file */
+    uint32_t align; /* alignment as a power of 2 */
+    uint32_t reserved; /* reserved */
+};
+#endif
+
 #define ERROR(str, args...) LOG("ERROR: [%s] " str, __func__, ##args)
 #define INFO(str, args...) LOG("INFO: " str, ##args)
 
