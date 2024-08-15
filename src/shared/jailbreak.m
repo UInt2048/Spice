@@ -14,7 +14,6 @@
 #include "kmem.h"
 #include "kutils.h"
 #include "nonce.h"
-#include "pwn.h"
 #include "remote.h"
 #include "root.h"
 #include "root_fs.h"
@@ -95,7 +94,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     } else {
         // suspend_all_threads();
 
-        ret = pwn_kernel(offs, &kernel_task, &kbase, controller, sendLog);
+        ret = pwn_kernel_lightspeed(&offs, &kernel_task, &kbase, controller, sendLog);
 
         // resume_all_threads();
 
