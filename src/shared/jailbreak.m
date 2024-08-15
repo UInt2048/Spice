@@ -94,7 +94,19 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     } else {
         // suspend_all_threads();
 
-        ret = pwn_kernel_lightspeed(&offs, &kernel_task, &kbase, controller, sendLog);
+        if (offs.flags & FLAG_SOCK_PORT) {
+            PWN_LOG("Selected sock_port exploit");
+            ret = pwn_kernel_sock_port(&offs, &kernel_task, &kbase, controller, sendLog);
+        } else if (offs.flags & FLAG_VORTEX) {
+            PWN_LOG("Selected v0rtex exploit");
+            ret = pwn_kernel_vortex(&offs, &kernel_task, &kbase, controller, sendLog);
+        } else if (offs.flags & FLAG_LIGHTSPEED) {
+            PWN_LOG("Selected lightspeed exploit");
+            ret = pwn_kernel_lightspeed(&offs, &kernel_task, &kbase, controller, sendLog);
+        } else {
+            PWN_LOG("Error: No exploit selected");
+            ret = KERN_INVALID_VALUE;
+        }
 
         // resume_all_threads();
 
@@ -225,6 +237,8 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         PWN_LOG("We're already jailbroken silly");
         // spin for now
         while (1) { }
+    } else {
+        PWN_LOG("Double boot check activated");
     }
     fclose(fopen(doublebootcheck, "w"));
 
@@ -281,8 +295,18 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                 {
                     // modify springboard settings plist so cydia shows
 
+                    if (access("/usr/bin/killall", F_OK) != 0) {
+                        PWN_LOG("Failed to access /usr/bin/killall");
+                        ret = KERN_FAILURE;
+                        goto out;
+                    }
+
                     ret = execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "-SIGSTOP", "cfprefsd", NULL });
-                    if (ret != 0) {
+                    if (ret == 85) /* Rejected by amfid */ {
+                        PWN_LOG("killall rejected by amfid?");
+                        ret = KERN_FAILURE;
+                        goto out;
+                    } else if (ret != 0) {
                         PWN_LOG("failed to run killall(1): %d", ret);
                         ret = KERN_FAILURE;
                         goto out;

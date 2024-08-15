@@ -14,6 +14,8 @@ extern task_t kernel_task;
 extern kptr_t kernel_slide;
 extern kptr_t kernproc;
 
+kern_return_t pwn_kernel_sock_port(offsets_t* offsets, task_t* tfp0, kptr_t* kbase, void* controller, void (*sendLog)(void*, NSString*));
+kern_return_t pwn_kernel_vortex(offsets_t* offsets, task_t* tfp0, kptr_t* kbase, void* controller, void (*sendLog)(void*, NSString*));
 kern_return_t pwn_kernel_lightspeed(offsets_t* offsets, task_t* tfp0, kptr_t* kbase, void* controller, void (*sendLog)(void*, NSString*));
 
 time_t bootsec();
