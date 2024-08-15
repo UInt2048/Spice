@@ -1,8 +1,8 @@
-#include <string.h>             // strcmp
+#include <string.h> // strcmp
 
-#include <shared/common.h>
 #include "common.h"
 #include "install.h"
+#include <shared/common.h>
 #include <shared/jailbreak.h>
 
 // TODO: port generator.m here
@@ -29,26 +29,22 @@ __attribute__((constructor)) static void dylib_main(void)
 }
 
 // Do nothing when we move to the next stage
-void sendLog(void* controller, NSString* log) {}
+void sendLog(void* controller, NSString* log) { }
 
-int main(int argc, const char **argv)
+int main(int argc, const char** argv)
 {
 #ifdef __x86_64__
-    if(argc != 3)
-    {
+    if (argc != 3) {
         LOG("Usage: %s racoon dyld_cache", argv[0]);
         return -1;
     }
-#   warning TODO: 32bit
+#warning TODO: 32bit
     return install("./racoon.conf", argv[1], argv[2]);
 #else
-    if(argc != 2)
-    {
+    if (argc != 2) {
         LOG("Usage: %s install|pwn", argv[0]);
         return -1;
-    }
-    else if(strcmp(argv[1], "install") == 0)
-    {
+    } else if (strcmp(argv[1], "install") == 0) {
         return install("/etc/racoon/racoon.conf", "/usr/sbin/racoon",
 #ifdef __LP64__
             "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64"
@@ -56,9 +52,7 @@ int main(int argc, const char **argv)
             "/System/Library/Caches/com.apple.dyld/dyld_shared_cache_armv7s"
 #endif
         );
-    }
-    else if(strcmp(argv[1], "pwn") == 0)
-    {
+    } else if (strcmp(argv[1], "pwn") == 0) {
         return jailbreak(JBOPT_POST_ONLY, NULL, &sendLog);
     }
     LOG("Come again?");

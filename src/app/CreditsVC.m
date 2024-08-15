@@ -1,6 +1,6 @@
 #import "CreditsVC.h"
 
-UILabel *creditLabel;
+UILabel* creditLabel;
 
 @implementation CreditsVC
 
@@ -13,24 +13,24 @@ UILabel *creditLabel;
 
 - (void)viewWillAppear:(BOOL)animated
 {
-	[super viewWillAppear:animated];
-    CAGradientLayer *gradient = [CAGradientLayer layer];
-	gradient.frame = self.view.bounds;
-	gradient.colors = @[(id)[UIColor colorWithRed:92.0/255.0 green:201.0/255.0 blue:59.0/255.0 alpha:1.0].CGColor,
-		(id)[UIColor colorWithRed:42.0/255.0 green:100.0/255.0 blue:25.0/255.0 alpha:1.0].CGColor];
-	[self.view.layer insertSublayer:gradient atIndex:0];
+    [super viewWillAppear:animated];
+    CAGradientLayer* gradient = [CAGradientLayer layer];
+    gradient.frame = self.view.bounds;
+    gradient.colors = @[ (id)[UIColor colorWithRed:92.0 / 255.0 green:201.0 / 255.0 blue:59.0 / 255.0 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:42.0 / 255.0 green:100.0 / 255.0 blue:25.0 / 255.0 alpha:1.0].CGColor ];
+    [self.view.layer insertSublayer:gradient atIndex:0];
 }
 
 - (void)loadView
 {
     [super loadView];
-    
-    CAGradientLayer *gradient = [CAGradientLayer layer];
-	gradient.frame = self.view.bounds;
-	gradient.colors = @[(id)[UIColor colorWithRed:92.0/255.0 green:201.0/255.0 blue:59.0/255.0 alpha:1.0].CGColor,
-		(id)[UIColor colorWithRed:42.0/255.0 green:100.0/255.0 blue:25.0/255.0 alpha:1.0].CGColor];
-	[self.view.layer insertSublayer:gradient atIndex:0];
-    
+
+    CAGradientLayer* gradient = [CAGradientLayer layer];
+    gradient.frame = self.view.bounds;
+    gradient.colors = @[ (id)[UIColor colorWithRed:92.0 / 255.0 green:201.0 / 255.0 blue:59.0 / 255.0 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:42.0 / 255.0 green:100.0 / 255.0 blue:25.0 / 255.0 alpha:1.0].CGColor ];
+    [self.view.layer insertSublayer:gradient atIndex:0];
+
     creditLabel = [UILabel new];
     creditLabel.translatesAutoresizingMaskIntoConstraints = NO;
     creditLabel.numberOfLines = 0;
@@ -44,7 +44,7 @@ UILabel *creditLabel;
 - Jonathan Levin for jtool";
     [creditLabel setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
     creditLabel.font = [UIFont systemFontOfSize:14];
-    
+
     [self.view addSubview:creditLabel];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:creditLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:creditLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.0 constant:0.0]];

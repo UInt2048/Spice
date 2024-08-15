@@ -109,9 +109,9 @@
 
 @interface MainVC : UIViewController
 
-@property (nonatomic, strong) UITextView *textView;
+@property (nonatomic, strong) UITextView* textView;
 
-- (void)showLog:(NSString *)log;
+- (void)showLog:(NSString*)log;
 
 - (id)init;
 
