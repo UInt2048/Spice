@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Makefile for stage 3 as the Makefile in the root dir is outdated (because I suck at Makefiles)
+# Generate computed offsets for stage 3
 cd $(realpath "$(dirname "${BASH_SOURCE[0]}")") # Ensure we're in the script directory
-$(< ./sdk.txt) clang -shared -fno-stack-protector -fno-stack-check -fno-builtin -ffreestanding -mios-version-min=10.0 -arch "$(< ./arch.txt)" stage3.m -o ./generated/racoon.dylib && jtool --sign --inplace ./generated/racoon.dylib && jtool --sig ./generated/racoon.dylib
 
 # We should sign stage 3 without a legacy SHA1 code directory
 # The hash we want is the first 20 bytes of the SHA256 CDHash
