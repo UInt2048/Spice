@@ -66,7 +66,7 @@ static void sendLog(void* controller, NSString* log)
 static UIButton* jbButton;
 static UILabel *spiceLabel, *titleLabel;
 static bool hasJailbroken = false;
-static uint32_t jailbreakFlags = 0;
+static uint32_t jailbreakFlags = JBOPT_EXPLOIT_AUTO;
 
 - (void)showLog:(NSString*)log
 {

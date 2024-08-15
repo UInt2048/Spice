@@ -21,5 +21,5 @@ int main()
         signal(i, sighandler);
     }
     // call out to the post exploitation framework (implemented under shared)
-    jailbreak(JBOPT_POST_ONLY, NULL, &sendLog);
+    jailbreak(JBOPT_EXPLOIT_AUTO | JBOPT_POST_ONLY, NULL, &sendLog);
 }

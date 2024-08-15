@@ -130,7 +130,7 @@ int inject_trust(const char* path)
         for (int j = 0; j < sizeof(hash_t); j += sizeof(uint32_t)) {
             ptr += sprintf(ptr, "%x", ntohl(*(uint32_t*)&chain_buf->hash[i][j]));
         }
-        LOG("got cdhash (%d): %s", i, msg);
+        LOG("got cdhash (%zu): %s", i, msg);
     }
 
     uint64_t kernel_trust = kalloc(total_struct_size);

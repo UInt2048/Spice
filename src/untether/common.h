@@ -21,13 +21,13 @@ typedef uint32_t kptr_t;
 #endif
 
 #ifdef RELEASE
-#define LOG(str, args...) \
-    do {                  \
+#define LOG(str, ...) \
+    do {              \
     } while (0)
 #else
-#define LOG(str, args...)         \
-    do {                          \
-        NSLog(@str "\n", ##args); \
+#define LOG(str, ...)                    \
+    do {                                 \
+        NSLog(@str "\n", ##__VA_ARGS__); \
     } while (0)
 #endif
 

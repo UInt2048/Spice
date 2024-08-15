@@ -16,7 +16,11 @@ static kptr_t IOSurfaceRootUserClient_port;
 static kptr_t IOSurfaceRootUserClient_addr;
 static kptr_t fake_vtable;
 static kptr_t fake_client;
+
+#ifdef __LP64__
 static kmap_hdr_t zm_hdr;
+#endif
+
 const int fake_kalloc_size = 0x1000;
 
 #ifdef __LP64__

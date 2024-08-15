@@ -52,9 +52,9 @@ pid_t get_pid_for_name(const char* name)
 kptr_t task_self_addr(void)
 {
     kptr_t self_proc = find_proc(getpid());
-    LOG("got self_proc = %llx\n", self_proc);
+    LOG("got self_proc = " ADDR "\n", self_proc);
 
-    return rk64(self_proc + OFFSET_PROC_TASK);
+    return kread_kptr(self_proc + OFFSET_PROC_TASK);
 }
 
 kptr_t find_port_address(mach_port_name_t port)

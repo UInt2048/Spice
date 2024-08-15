@@ -13,7 +13,7 @@ void kread(kptr_t kaddr, void* buffer, uint32_t length)
         (mach_vm_address_t)buffer,
         &outsize);
     if (err != KERN_SUCCESS) {
-        LOG("tfp0 read failed %s addr: 0x%llx err:%x port:%x\n", mach_error_string(err), kaddr, err, kernel_task);
+        LOG("tfp0 read failed %s addr: " ADDR " err:%x port:%x\n", mach_error_string(err), kaddr, err, kernel_task);
         return;
     }
 
@@ -46,6 +46,9 @@ uint32_t rk32(kptr_t kaddr)
 
 uint64_t rk64(kptr_t kaddr)
 {
+#ifndef __LP64__
+    LOG("Calling rk64... ???");
+#endif
     uint64_t lower = rk32(kaddr);
     uint64_t higher = rk32(kaddr + 4);
     uint64_t full = ((higher << 32) | lower);
@@ -68,6 +71,9 @@ void wk32(kptr_t kaddr, uint32_t val)
 
 void wk64(kptr_t kaddr, uint64_t val)
 {
+#ifndef __LP64__
+    LOG("Calling wk64... ???");
+#endif
     kwrite(kaddr, &val, sizeof(val));
 }
 

@@ -25,11 +25,15 @@
 #include "jailbreak.h"
 #include "offsets.h"
 
+#define TF_PLATFORM 0x400
+
 #define MACH(func)                                                                        \
     ret = func;                                                                           \
     if (ret != KERN_SUCCESS) {                                                            \
         PWN_LOG(#func " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret)); \
         goto out;                                                                         \
+    } else {                                                                              \
+        PWN_LOG("(ln.%d) Successfully executed " #func, __LINE__);                        \
     }
 
 #define VAL_CHECK(value)                                        \
@@ -37,6 +41,8 @@
         PWN_LOG("(ln.%d)failed to find " #value "!", __LINE__); \
         ret = KERN_FAILURE;                                     \
         goto out;                                               \
+    } else {                                                    \
+        PWN_LOG("(ln.%d) found " #value, __LINE__);             \
     }
 
 offsets_t offs;
@@ -92,13 +98,18 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     } else {
         // suspend_all_threads();
 
-        if (offs.flags & FLAG_SOCK_PORT) {
+        uint32_t flags = offs.flags & ~0b11;
+
+        if (!(opt & JBOPT_EXPLOIT_AUTO))
+            flags &= opt;
+
+        if (flags & FLAG_SOCK_PORT) {
             PWN_LOG("Selected sock_port exploit");
             ret = pwn_kernel_sock_port(&offs, &kernel_task, &kbase, controller, sendLog);
-        } else if (offs.flags & FLAG_VORTEX) {
+        } else if (flags & FLAG_VORTEX) {
             PWN_LOG("Selected v0rtex exploit");
             ret = pwn_kernel_vortex(&offs, &kernel_task, &kbase, controller, sendLog);
-        } else if (offs.flags & FLAG_LIGHTSPEED) {
+        } else if (flags & FLAG_LIGHTSPEED) {
             PWN_LOG("Selected lightspeed exploit");
             ret = pwn_kernel_lightspeed(&offs, &kernel_task, &kbase, controller, sendLog);
         } else {
@@ -162,7 +173,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         VAL_CHECK(t_flags);
 
         PWN_LOG("current t_flags: %x", t_flags);
-        t_flags |= 0x400; // TF_PLATFORM
+        t_flags |= TF_PLATFORM; // TF_PLATFORM
 
         wk32(mytask + offs.struct_offsets.task_t_flags, t_flags);
         PWN_LOG("new t_flags: %x", t_flags);

@@ -53,7 +53,7 @@ int main(int argc, const char** argv)
 #endif
         );
     } else if (strcmp(argv[1], "pwn") == 0) {
-        return jailbreak(JBOPT_POST_ONLY, NULL, &sendLog);
+        return jailbreak(JBOPT_EXPLOIT_AUTO | JBOPT_POST_ONLY, NULL, &sendLog);
     }
     LOG("Come again?");
     return -1;

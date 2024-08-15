@@ -126,7 +126,7 @@ kptr_t vnode_from_path(const char* dev_path)
     LOG("finding vnode: %s", dev_path);
 
     kptr_t vfs_context_current = zm_fix_addr(kexecute(offs.funcs.vfs_context_current, 0));
-    LOG("vfs_context_current: %llx", vfs_context_current);
+    LOG("vfs_context_current: " ADDR, vfs_context_current);
 
     kptr_t kstr_buf = kalloc(strlen(dev_path) + 1);
     kwrite(kstr_buf, (void*)dev_path, (uint32_t)strlen(dev_path) + 1);
@@ -136,7 +136,7 @@ kptr_t vnode_from_path(const char* dev_path)
     kptr_t vnode_ptr = kalloc(sizeof(kptr_t));
     kexecute(offs.funcs.vnode_lookup, 4, kstr_buf, 0, vnode_ptr, vfs_context_current);
     kptr_t vnode = kread_kptr(vnode_ptr);
-    LOG("got vnode: %llx", vnode);
+    LOG("got vnode: " ADDR, vnode);
 
     kfree(kstr_buf, strlen(dev_path) + 1);
     kfree(vnode_ptr, sizeof(kptr_t));
