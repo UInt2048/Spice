@@ -1,10 +1,12 @@
+#include <archive.h>
 #include <dlfcn.h>
+#include <errno.h>
 #include <mach/mach.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/stat.h>
-
-#include <archive.h>
+#include <sys/sysctl.h>
+#include <time.h>
 
 #include "ArchiveFile.h"
 #include "codesign.h"
@@ -41,10 +43,6 @@ offsets_t offs;
 task_t kernel_task;
 kptr_t kernel_slide;
 kptr_t kernproc;
-
-#include <errno.h>
-#include <sys/sysctl.h>
-#include <time.h>
 
 // Shamelessly stolen from https://stackoverflow.com/a/11676260/
 time_t bootsec()

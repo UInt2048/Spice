@@ -919,7 +919,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         liboffsets->socket.task_vm_map                      = 0x14;
         liboffsets->socket.task_prev                        = 0x1c;
         liboffsets->socket.task_itk_space                   = 0x1e8;
-        liboffsets->socket.task_bsd_info                    = 0x22c;
+        liboffsets->socket.task_bsd_info                    = 0x22c; // offset from get_bsdtask_info
         liboffsets->socket.ipc_port_ip_receiver             = 0x44;
         liboffsets->socket.ipc_port_ip_kobject              = 0x48;
         liboffsets->socket.proc_pid                         = 0x8;

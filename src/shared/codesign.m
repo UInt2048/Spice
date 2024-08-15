@@ -31,8 +31,8 @@ struct fat_arch_64 {
 };
 #endif
 
-#define ERROR(str, args...) LOG("ERROR: [%s] " str, __func__, ##args)
-#define INFO(str, args...) LOG("INFO: " str, ##args)
+#define ERROR(str, ...) LOG("ERROR: [%@] " str, @(__func__), ##__VA_ARGS__)
+#define INFO(str, ...) LOG("INFO: " str, ##__VA_ARGS__)
 
 int inject_trust(const char* path)
 {
@@ -185,7 +185,7 @@ void* put_dick_in_macho(const char* path, uint64_t file_off)
 // Finds the LC_CODE_SIGNATURE load command
 const uint8_t* find_code_signature(img_info_t* info, uint32_t* cs_size)
 {
-#define _LOG_ERROR(str, args...) ERROR("(%s) " str, info->name, ##args)
+#define _LOG_ERROR(str, ...) ERROR("(%s) " str, info->name, ##__VA_ARGS__)
     if (info == NULL || info->addr == NULL) {
         return NULL;
     }
@@ -376,15 +376,13 @@ const char* get_hash_name(uint8_t hash_type)
         return "SHA384";
 
     default:
-        return "UNKNWON";
+        return "UNKNOWN";
     }
-
-    return "";
 }
 
 int open_img(img_info_t* info)
 {
-#define _LOG_ERROR(str, args...) ERROR("(%s) " str, info->name, ##args)
+#define _LOG_ERROR(str, ...) ERROR("(%s) " str, info->name, ##__VA_ARGS__)
     int ret = -1;
 
     if (info == NULL) {

@@ -127,6 +127,7 @@ typedef volatile struct {
     uint32_t ip_sorights;
 } kport_t;
 
+/*
 typedef volatile union {
     struct {
         // UserClient:
@@ -174,5 +175,6 @@ typedef volatile union {
         int32_t __ipc;
     };
 } fakeuc_t;
+*/
 
 #endif

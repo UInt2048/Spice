@@ -183,21 +183,29 @@ bool populate_offsets(offsets_t* liboffsets, struct offset_struct* offsets);
 #define OFFSET_IPC_PORT_IP_KOBJECT 0x68 // "ipc_kobject_server: strange destination rights", scroll up to case 2
 #define OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX 0xb7 // see offsets.m
 #define OFFSET_IOEXTERNALTRAP_OBJECT 0x40 // the offset used by our gadget
+#define OFFSET_IOEXTERNALTRAP_FUNC (0x40 + sizeof(kptr_t)) // + sizeof(kptr_t)
 #else
 #define OFFSET_IPC_PORT_IP_KOBJECT 0x48 // "ipc_kobject_server: strange destination rights", scroll up to case 2
 #define OFFSET_VTAB_GET_EXTERNAL_TRAP_FOR_INDEX 0xe1 // see offsets.m
 #define OFFSET_IOEXTERNALTRAP_OBJECT 0x30 // the offset used by our gadget
+#define OFFSET_IOEXTERNALTRAP_FUNC (0x30 + sizeof(kptr_t)) // + sizeof(kptr_t)
 #endif
 
-#define OFFSET_IOEXTERNALTRAP_FUNC OFFSET_IOEXTERNALTRAP_OBJECT + sizeof(kptr_t) // + sizeof(kptr_t)
-
 // For kents.m
-#define OFFSET_PROC_P_TEXTVP 0x248
-#define OFFSET_VNODE_V_UBCINFO 0x78
-#define OFFSET_UBCINFO_CSBLOBS 0x50
-#define OFFSET_CSBLOB_CSB_ENTITLEMENTS_BLOB 0x90
-#define OFFSET_CSBLOB_HEADER_LEN 0x8
-#define OFFSET_CSBLOB_LENGTH 0x4
+#ifdef __LP64__
+#define OFFSET_PROC_P_TEXTVP 0x248 // found in csproc_get_blob
+#define OFFSET_VNODE_V_UBCINFO 0x78 // found in csfg_get_platform_binary
+#define OFFSET_UBCINFO_CSBLOBS 0x50 // found in csfg_get_platform_binary
+#define OFFSET_CSBLOB_CSB_ENTITLEMENTS_BLOB 0x90 // found in csblob_get_entitlements
+#else
+#define OFFSET_PROC_P_TEXTVP 0x160 // found in csproc_get_blob
+#define OFFSET_VNODE_V_UBCINFO 0x4c // found in csfg_get_platform_binary
+#define OFFSET_UBCINFO_CSBLOBS 0x30 // found in csfg_get_platform_binary
+#define OFFSET_CSBLOB_CSB_ENTITLEMENTS_BLOB 0x60 // found in csblob_get_entitlements
+#endif
+
+#define OFFSET_CSBLOB_LENGTH 0x4 // static, offset of length field in CS_GenericBlob header
+#define OFFSET_CSBLOB_DATA 0x8 // static, offset of data field in CS_GenericBlob
 
 // For kutils.m
 #ifdef __LP64__
@@ -219,16 +227,28 @@ bool populate_offsets(offsets_t* liboffsets, struct offset_struct* offsets);
 #define OFFSET_PROC_LE_PREV sizeof(kptr_t) // from the definition of LIST_ENTRY macro
 
 // For nonce.m
-#define OFFSET_SEARCH_NVRAM_PROP 0x590
-#define OFFSET_GET_OF_VARIABLE_PERM 0x558
-#define OFFSET_VTAB_SIZE 0x620
-#define OFFSET_IODTNVRAM_OBJ 0x68
+#ifdef __LP64__
+#define OFFSET_SEARCH_NVRAM_PROP (8 * 0xb2) // Search for __ZTV9IODTNVRAM, find address of IODTNVRAM::searchNVRAMProperty
+#define OFFSET_GET_OF_VARIABLE_PERM (8 * 0xab) // Search for __ZTV9IODTNVRAM, find address of IODTNVRAM::getOFVariablePerm
+#define OFFSET_VTAB_SIZE 0x620 // Search for __ZTV9IODTNVRAM
+#else
+#define OFFSET_SEARCH_NVRAM_PROP (4 * 0xdb) // Search for __ZTV9IODTNVRAM, find address of IODTNVRAM::searchNVRAMProperty
+#define OFFSET_GET_OF_VARIABLE_PERM (4 * 0xd4) // Search for __ZTV9IODTNVRAM, find address of IODTNVRAM::getOFVariablePerm
+#define OFFSET_VTAB_SIZE 0x3b4 // Search for __ZTV9IODTNVRAM
+#endif
 
 // For root_fs.m
-#define OFFSET_VNODE_V_MOUNT 0xd8
-#define OFFSET_V_MOUNT_V_FLAG 0x70
-#define OFFSET_VNODE_SPEC_INFO 0x78
-#define OFFSET_SPEC_INFO_FLAGS 0x10
+#ifdef __LP64__
+#define OFFSET_VNODE_V_MOUNT 0xd8 // found in vnode_mount
+#define OFFSET_V_MOUNT_MNT_FLAG 0x70 // found in vfs_isreload
+#define OFFSET_VNODE_V_SPECINFO 0x78 // found in spec_open
+#define OFFSET_V_SPECINFO_SI_FLAGS 0x10 // "checkalias with VT_NON vp that shouldn't: %p", search 0xfffffff, offset above
+#else
+#define OFFSET_VNODE_V_MOUNT 0x84 // found in vnode_mount
+#define OFFSET_V_MOUNT_MNT_FLAG 0x38 // found in vfs_isreload
+#define OFFSET_VNODE_V_SPECINFO 0x4c // found in spec_open
+#define OFFSET_V_SPECINFO_SI_FLAGS 0x8 // "checkalias with VT_NON vp that shouldn't: %p", search 0xfffffff, offset above
+#endif
 
 // For root.m
 // Note for understanding these:

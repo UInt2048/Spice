@@ -3,7 +3,7 @@ SHELL            = /bin/bash
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
-VERSION          = 1.0.173
+VERSION          = 1.0.174
 
 BIN              = bin
 RES              = res

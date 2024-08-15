@@ -7,6 +7,20 @@
 jake_img_t racoon_img;
 jake_img_t cache_img;
 
+#ifdef __LP64__
+#define OLD_CACHE_ADDR 0x180000000
+#else
+#define OLD_CACHE_ADDR 0x1a000000
+#endif
+
+// more control functions
+void init_uland_offsetfinder(const char* racoon_bin, const char* cache);
+#define find_data(bin, bin_size, data, data_size) find_data_raw(bin, bin_size, data, data_size, 1)
+
+// convert between the address and the fileoffset for the cache
+#define CACHE_FILE2ADDR(addr) ((void*)(jake_vaddr_to_fileoff(cache_img, (kptr_t)addr) + OLD_CACHE_ADDR))
+#define CACHE_ADDR2FILE(addr) ((void*)(jake_fileoff_to_vaddr(cache_img, (kptr_t)addr - OLD_CACHE_ADDR)))
+
 // helper funcs
 // find raw binary data that might be aligned inside of the binary
 void* find_data_raw(const void* bin, size_t bin_size, void* data, size_t data_size, int search_aligned);
@@ -44,13 +58,5 @@ void* get_beast_gadget();
 void* get_str_x0_gadget();
 // find the gadget to add two vars and store the result in x0
 void* get_add_x0_gadget();
-
-// more control functions
-void init_uland_offsetfinder(const char* racoon_bin, const char* cache);
-#define find_data(bin, bin_size, data, data_size) find_data_raw(bin, bin_size, data, data_size, 1)
-
-// convert between the address and the fileoffset for the cache
-#define CACHE_FILE2ADDR(addr) ((void*)jake_vaddr_to_fileoff(cache_img, (uint64_t)addr) + 0x180000000)
-#define CACHE_ADDR2FILE(addr) ((void*)jake_fileoff_to_vaddr(cache_img, (uint64_t)addr - 0x180000000))
 
 #endif

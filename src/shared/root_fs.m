@@ -121,25 +121,25 @@ const char* get_root_snapshot_name(const char* path)
     return NULL;
 }
 
-uint64_t vnode_from_path(const char* dev_path)
+kptr_t vnode_from_path(const char* dev_path)
 {
     LOG("finding vnode: %s", dev_path);
 
-    uint64_t vfs_context_current = zm_fix_addr(kexecute(offs.funcs.vfs_context_current, 0));
+    kptr_t vfs_context_current = zm_fix_addr(kexecute(offs.funcs.vfs_context_current, 0));
     LOG("vfs_context_current: %llx", vfs_context_current);
 
-    uint64_t kstr_buf = kalloc(strlen(dev_path) + 1);
+    kptr_t kstr_buf = kalloc(strlen(dev_path) + 1);
     kwrite(kstr_buf, (void*)dev_path, (uint32_t)strlen(dev_path) + 1);
 
     // note to self: have to use vnode_lookup as you can't
     // get an fd on /dev/disk0s1s1 to pass to vnode_getfromfd
-    uint64_t vnode_ptr = kalloc(sizeof(uint64_t));
+    kptr_t vnode_ptr = kalloc(sizeof(kptr_t));
     kexecute(offs.funcs.vnode_lookup, 4, kstr_buf, 0, vnode_ptr, vfs_context_current);
-    uint64_t vnode = rk64(vnode_ptr);
+    kptr_t vnode = kread_kptr(vnode_ptr);
     LOG("got vnode: %llx", vnode);
 
     kfree(kstr_buf, strlen(dev_path) + 1);
-    kfree(vnode_ptr, sizeof(uint64_t));
+    kfree(vnode_ptr, sizeof(kptr_t));
 
     if (vnode == 0x0) {
         LOG("failed to get vnode for %s", dev_path);
@@ -152,15 +152,15 @@ uint64_t vnode_from_path(const char* dev_path)
 kern_return_t patch_device_vnode(const char* dev_path)
 {
     LOG("patching vnode for: %s", dev_path);
-    uint64_t vnode = vnode_from_path(dev_path);
+    kptr_t vnode = vnode_from_path(dev_path);
     if (vnode == 0x0) {
         LOG("failed to patch vnode");
         return KERN_FAILURE;
     }
 
     // we must 0 this else mount will return 'resource busy'
-    uint64_t spec_info = rk64(vnode + 0x78);
-    wk32(spec_info + 0x10, 0); // zero our spec_flags
+    kptr_t spec_info = kread_kptr(vnode + OFFSET_VNODE_V_SPECINFO);
+    wk32(spec_info + OFFSET_V_SPECINFO_SI_FLAGS, 0); // zero our spec_flags
 
     return KERN_SUCCESS;
 }
@@ -169,26 +169,26 @@ kern_return_t dunk_on_mac_mount()
 {
     kern_return_t ret = 0;
 
-    uint64_t rootfs_vnode = rk64(offs.data.rootvnode + kernel_slide);
+    kptr_t rootfs_vnode = kread_kptr(offs.data.rootvnode + kernel_slide);
     if (rootfs_vnode == 0x0) {
         LOG("failed to find rootfs vnode");
         return KERN_FAILURE;
     }
 
-    uint64_t v_mount = rk64(rootfs_vnode + 0xd8);
+    kptr_t v_mount = kread_kptr(rootfs_vnode + OFFSET_VNODE_V_MOUNT);
     if (v_mount == 0x0) {
         LOG("failed to find v_mount");
         return KERN_FAILURE;
     }
 
-    uint32_t v_flag = rk32(v_mount + 0x70);
+    uint32_t v_flag = rk32(v_mount + OFFSET_V_MOUNT_MNT_FLAG);
     if (v_flag == 0x0) {
-        LOG("failed to find v_flag");
+        LOG("failed to find mnt_flag");
         return KERN_FAILURE;
     }
 
     // unset rootfs flag
-    wk32(v_mount + 0x70, v_flag & ~MNT_ROOTFS);
+    wk32(v_mount + OFFSET_V_MOUNT_MNT_FLAG, v_flag & ~MNT_ROOTFS);
 
     // remount
     char* name = strdup("/dev/disk0s1s1");
@@ -196,8 +196,8 @@ kern_return_t dunk_on_mac_mount()
     LOG("mount ret: %d", ret);
 
     // read back new flags
-    v_mount = rk64(rootfs_vnode + 0xd8);
-    v_flag = rk32(v_mount + 0x70);
+    v_mount = kread_kptr(rootfs_vnode + OFFSET_VNODE_V_MOUNT);
+    v_flag = rk32(v_mount + OFFSET_V_MOUNT_MNT_FLAG);
 
     // set rootfs flag back & unset nosuid
     v_flag = v_flag | MNT_ROOTFS;
@@ -205,7 +205,7 @@ kern_return_t dunk_on_mac_mount()
     LOG("new v_flag: %x", v_flag);
 
     // set new flags
-    wk32(v_mount + 0x70, v_flag);
+    wk32(v_mount + OFFSET_V_MOUNT_MNT_FLAG, v_flag);
 
     return ret;
 }
@@ -242,12 +242,12 @@ kern_return_t remount_root_fs()
         gettimeofday(NULL, &mnt_args.hfs_timezone);
 
         // find credz
-        uint64_t our_proc = find_proc(getpid());
-        uint64_t our_ucred = rk64(our_proc + 0x100);
-        uint64_t kern_ucred = rk64(find_proc(0) + 0x100);
+        kptr_t our_proc = find_proc(getpid());
+        kptr_t our_ucred = kread_kptr(our_proc + OFFSET_PROC_P_UCRED);
+        kptr_t kern_ucred = kread_kptr(find_proc(0) + OFFSET_PROC_P_UCRED);
 
         // set kern ucred (bypass perm. check)
-        wk64(our_proc + 0x100, kern_ucred);
+        kwrite_kptr(our_proc + OFFSET_PROC_P_UCRED, kern_ucred);
 
         ret = mount("apfs", "/var/tmp/rootfs", 0, &mnt_args);
         if (ret != 0) {
@@ -293,7 +293,7 @@ kern_return_t remount_root_fs()
         ret = snapshot_rename("/var/tmp/rootfs", root_snapshot, "original_rootfs");
 
         // restore creds
-        wk64(our_proc + 0x100, our_ucred);
+        kwrite_kptr(our_proc + OFFSET_PROC_P_UCRED, our_ucred);
 
         if (ret != 0) {
             printf("failed to rename snapshot from %s to original_rootfs: %d (%d - %s)\n", root_snapshot, ret, errno, strerror(errno));
