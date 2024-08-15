@@ -7,13 +7,19 @@
 bool did_require_elevation = false;
 uint8_t original_ucred_struct[12];
 
+#ifdef __LP64__
+#define LOG_KPTR(...) LOG("%s %llx", __VA_ARGS__)
+#else
+#define LOG_KPTR(...) LOG("%s %x", __VA_ARGS__)
+#endif
+
 kern_return_t elevate_to_root()
 {
     kptr_t kernproc = find_proc(0);
-    LOG("got kern proc at %llx", kernproc);
+    LOG_KPTR("got kern proc at", kernproc);
 
     kptr_t ourproc = find_proc(getpid());
-    LOG("got ourproc at %llx", ourproc);
+    LOG_KPTR("got ourproc at", ourproc);
 
     kptr_t kern_ucred = rk64(kernproc + 0x100); // proc->p_ucred
     kptr_t our_ucred = rk64(ourproc + 0x100); // proc->p_ucred
@@ -53,7 +59,7 @@ kern_return_t restore_to_mobile()
     }
 
     kptr_t ourproc = find_proc(getpid());
-    LOG("got ourproc at %llx", ourproc);
+    LOG_KPTR("got ourproc at", ourproc);
 
     kptr_t our_ucred = rk64(ourproc + 0x100);
 
