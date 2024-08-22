@@ -158,6 +158,8 @@ kptr_t kexecute(kptr_t addr, int n_args, ...)
         args[i] = va_arg(ap, kptr_t);
     }
 
+    va_end(ap);
+
     if (n_args == 0 || args[0] == 0x0) {
         args[0] = 0x1;
     }

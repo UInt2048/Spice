@@ -44,6 +44,11 @@ typedef struct val_attrs {
 // creds https://github.com/sbingner/snappy/blob/master/snappy.m#L90
 int snapshot_count(const char* path)
 {
+#ifndef __LP64__
+    // 32-bit devices only used HFS+ so it can't have any snapshots
+    return 0;
+#endif
+
     int dirfd = open(path, O_RDONLY);
 
     struct attrlist attr_list = { 0 };
@@ -68,7 +73,7 @@ int snapshot_count(const char* path)
     free(buf);
 
     if (retcount < 0) {
-        perror("fs_snapshot_list");
+        LOG("fs_snapshot_list: %s", strerror(errno));
         return -1;
     }
 
@@ -191,9 +196,20 @@ kern_return_t dunk_on_mac_mount()
     wk32(v_mount + OFFSET_V_MOUNT_MNT_FLAG, v_flag & ~MNT_ROOTFS);
 
     // remount
+    struct statfs output;
+    statfs("/", &output);
     char* name = strdup("/dev/disk0s1s1");
-    ret = mount("apfs", "/", MNT_UPDATE, &name);
-    LOG("mount ret: %d", ret);
+    ret = mount(output.f_fstypename, "/", MNT_UPDATE, &name);
+    LOG("mount %s ret: %d", output.f_fstypename, ret);
+
+    // test for failure
+    int fd = open("/.spice_mount_test", O_CREAT | O_RDWR, 0644);
+    if (fd < 0) {
+        LOG("failed to mount");
+        return KERN_FAILURE;
+    }
+    remove("/.spice_mount_test");
+    close(fd);
 
     // read back new flags
     v_mount = kread_kptr(rootfs_vnode + OFFSET_VNODE_V_MOUNT);
@@ -222,11 +238,11 @@ kern_return_t remount_root_fs()
         // rename the snapshot and say bye bye
 
         // mount the actual device to /var/tmp/rootfs
-        if (access("/var/tmp/roofs", F_OK) != 0) {
+        if (access("/var/tmp/rootfs", F_OK) != 0) {
             mkdir("/var/tmp/rootfs", 0755);
 
             if (access("/var/tmp/rootfs", F_OK) != 0) {
-                LOG("failed to create /var/tmprootfs dir!");
+                LOG("failed to create /var/tmp/rootfs dir!");
                 return KERN_FAILURE;
             }
         }
@@ -251,17 +267,17 @@ kern_return_t remount_root_fs()
 
         ret = mount("apfs", "/var/tmp/rootfs", 0, &mnt_args);
         if (ret != 0) {
-            printf("failed to call mount: %d (%d - %s)\n", ret, errno, strerror(errno));
+            LOG("failed to call mount: %d (%d - %s)\n", ret, errno, strerror(errno));
             return KERN_FAILURE;
         }
 
-        printf("before rename:\n");
+        LOG("before rename:\n");
         snapshot_count("/var/tmp/rootfs");
 
         // grab private ents to allow spelunking with apfs
         const char* current_ents = get_current_entitlements(getpid());
         if (current_ents == NULL) {
-            printf("failed to get current entitlements!\n");
+            LOG("failed to get current entitlements!\n");
             return KERN_FAILURE;
         }
 
@@ -279,14 +295,14 @@ kern_return_t remount_root_fs()
             "</dict>"
             "</plist>");
         if (ret != 0) {
-            printf("failed to assign new entitlements!\n");
+            LOG("failed to assign new entitlements!\n");
             return KERN_FAILURE;
         }
 
         const char* root_snapshot = get_root_snapshot_name("/var/tmp/rootfs");
 
         if (root_snapshot == NULL) {
-            printf("failed to find root snapshot\n");
+            LOG("failed to find root snapshot\n");
             return KERN_FAILURE;
         }
 
@@ -296,13 +312,13 @@ kern_return_t remount_root_fs()
         kwrite_kptr(our_proc + OFFSET_PROC_P_UCRED, our_ucred);
 
         if (ret != 0) {
-            printf("failed to rename snapshot from %s to original_rootfs: %d (%d - %s)\n", root_snapshot, ret, errno, strerror(errno));
+            LOG("failed to rename snapshot from %s to original_rootfs: %d (%d - %s)\n", root_snapshot, ret, errno, strerror(errno));
             return KERN_FAILURE;
         }
 
         free((void*)root_snapshot);
 
-        printf("after rename:\n");
+        LOG("after rename:\n");
         snapshot_count("/var/tmp/rootfs");
 
         // restore ents

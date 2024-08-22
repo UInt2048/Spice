@@ -27,22 +27,25 @@
 
 #define TF_PLATFORM 0x400
 
-#define MACH(func)                                                                        \
-    ret = func;                                                                           \
-    if (ret != KERN_SUCCESS) {                                                            \
-        PWN_LOG(#func " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret)); \
-        goto out;                                                                         \
-    } else {                                                                              \
-        PWN_LOG("(ln.%d) Successfully executed " #func, __LINE__);                        \
+#define STR(x) #x
+#define QUOTE(x) STR(x)
+
+#define MACH(func)                                                                              \
+    ret = func;                                                                                 \
+    if (ret != KERN_SUCCESS) {                                                                  \
+        PWN_LOG(QUOTE(func) " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret)); \
+        goto out;                                                                               \
+    } else {                                                                                    \
+        PWN_LOG(QUOTE(func) " (ln.%d) successfully executed", __LINE__);                        \
     }
 
-#define VAL_CHECK(value)                                        \
-    if ((value) == 0x0) {                                       \
-        PWN_LOG("(ln.%d)failed to find " #value "!", __LINE__); \
-        ret = KERN_FAILURE;                                     \
-        goto out;                                               \
-    } else {                                                    \
-        PWN_LOG("(ln.%d) found " #value, __LINE__);             \
+#define VAL_CHECK(value)                                                     \
+    if ((value) == 0x0) {                                                    \
+        PWN_LOG("(ln.%d) failed to find " QUOTE(value) "!", __LINE__);       \
+        ret = KERN_FAILURE;                                                  \
+        goto out;                                                            \
+    } else {                                                                 \
+        PWN_LOG("(ln.%d) found " QUOTE(value) ": " ADDR, __LINE__, (value)); \
     }
 
 offsets_t offs;
@@ -170,7 +173,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         // patch t_flags
         // bypasses task_conversion_eval checks
         uint32_t t_flags = rk32(mytask + offs.struct_offsets.task_t_flags); // task->t_flags
+
+        // We expect the value of t_flags to be 0 on 32-bit, so don't crash for no reason
+#ifdef __LP64__
         VAL_CHECK(t_flags);
+#endif
 
         PWN_LOG("current t_flags: %x", t_flags);
         t_flags |= TF_PLATFORM; // TF_PLATFORM
@@ -262,7 +269,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         chmod(to_path, 755);                                                                                        \
     } while (0)
 
-#define extractArchive(file) [[ArchiveFile archiveWithFile:@"/jb/bootstrap.tar.lzma"] extractToPath:@"/"]
+#define extractArchive(file) [[ArchiveFile archiveWithFile:file] extractToPath:@"/"]
 
 #define EXTRACT_RESOURCE(resource, fs, extract) \
     do {                                        \
@@ -280,11 +287,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         }                                       \
     } while (0)
 
-    if (access("/jb", F_OK) != 0) {
-        MACH(mkdir("/jb", 0755));
+    if (access("/var/spice", F_OK) != 0) {
+        MACH(mkdir("/var/spice", 0755));
 
-        if (access("/jb", F_OK) != 0) {
-            PWN_LOG("failed to create /jb directory!");
+        if (access("/var/spice", F_OK) != 0) {
+            PWN_LOG("failed to create /var/spice directory!");
             ret = KERN_FAILURE;
             goto out;
         }
@@ -293,9 +300,9 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     {
         if ((opt & JBOPT_POST_ONLY) == 0) {
             if (access("/.spice_bootstrap_installed", F_OK) != 0) {
-                EXTRACT_RESOURCE("bootstrap.tar.lzma", "/jb/bootstrap.tar.lzma", extractArchive);
+                EXTRACT_RESOURCE("bootstrap.tar.lzma", "/var/spice/bootstrap.tar.lzma", extractArchive);
 
-                EXTRACT_RESOURCE("jailbreak-resources.deb", "/jb/jailbreak-resources.deb", extractDeb);
+                EXTRACT_RESOURCE("jailbreak-resources.deb", "/var/spice/jailbreak-resources.deb", extractDeb);
 
                 fclose(fopen("/.spice_bootstrap_installed", "w+"));
 
@@ -362,7 +369,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
             if (access("/usr/libexec/substrate", F_OK) != 0) {
                 PWN_LOG("substrate was not found? installing it...");
 
-                EXTRACT_RESOURCE("mobilesubstrate.deb", "/jb/mobilesubstrate.deb", extractDeb);
+                EXTRACT_RESOURCE("mobilesubstrate.deb", "/var/spice/mobilesubstrate.deb", extractDeb);
 
                 PWN_LOG("finished installing substrate");
             }
@@ -401,7 +408,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     {
         NSMutableDictionary* dict = NULL;
 
-        NSData* blob = [NSData dataWithContentsOfFile:@"/jb/offsets.plist"];
+        NSData* blob = [NSData dataWithContentsOfFile:@"/var/spice/offsets.plist"];
         if (blob != NULL) {
             dict = [NSPropertyListSerialization propertyListWithData:blob options:NSPropertyListMutableContainers format:nil error:nil];
         } else {
@@ -418,11 +425,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         dict[@"Smalloc"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.smalloc + kernel_slide];
         dict[@"ZoneMapOffset"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.data.zone_map + kernel_slide];
 
-        [dict writeToFile:@"/jb/offsets.plist" atomically:YES];
+        [dict writeToFile:@"/var/spice/offsets.plist" atomically:YES];
         PWN_LOG("wrote offsets.plist");
 
-        chown("/jb/offsets.plist", 0, 0);
-        chmod("/jb/offsets.plist", 0644);
+        chown("/var/spice/offsets.plist", 0, 0);
+        chmod("/var/spice/offsets.plist", 0644);
     }
 
     {
@@ -556,7 +563,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     ret = KERN_SUCCESS;
 
 out:
-    LOG("Restoring to mobile and exiting.");
+    PWN_LOG("Restoring to mobile and exiting.");
     restore_to_mobile();
 
     term_kexecute();
