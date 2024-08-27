@@ -4,9 +4,16 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <sys/mount.h>
-#include <sys/snapshot.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#if __has_include(<sys/snapshot.h>)
+#include <sys/snapshot.h>
+#else
+int fs_snapshot_list(int dirfd, struct attrlist* alist, void* attrbuf, size_t bufsize,
+    uint32_t flags);
+int fs_snapshot_rename(int dirfd, const char* old, const char* new, uint32_t flags);
+#endif
 
 #include "iokit.h"
 #include "jailbreak.h"
@@ -90,14 +97,14 @@ const char* get_root_snapshot_name(const char* path)
     int dirfd = open(path, O_RDONLY);
 
     struct attrlist attr_list = { 0 };
-    int total = 0;
+    // int total = 0;
 
     attr_list.commonattr = ATTR_BULK_REQUIRED;
 
     char* buf = (char*)calloc(2048, sizeof(char));
     int retcount;
     while ((retcount = fs_snapshot_list(dirfd, &attr_list, buf, 2048, 0)) > 0) {
-        total += retcount;
+        // total += retcount;
         char* bufref = buf;
 
         for (int i = 0; i < retcount; i++) {
