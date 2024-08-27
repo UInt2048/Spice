@@ -327,7 +327,22 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     {
         if ((opt & JBOPT_POST_ONLY) == 0) {
             if (access("/.spice_bootstrap_installed", F_OK) != 0) {
-                EXTRACT_RESOURCES("bootstrap/base", "/var/spice", extractDeb);
+#ifdef __LP64__
+                EXTRACT_RESOURCE("bootstrap/bootstrap.tar.lzma", "/var/spice/bootstrap.tar.lzma", extractArchive);
+                EXTRACT_RESOURCE("bootstrap/jailbreak-resources.deb", "/var/spice/jailbreak-resources.deb", extractDeb);
+#else
+                COPY_RESOURCE("bootstrap/tar", "/bin/tar");
+                COPY_RESOURCE("bootstrap/launchctl", "/bin/launchctl");
+                const char* bootstrap = [[NSString stringWithFormat:@"%s/bootstrap.tar", bundle_path] UTF8String];
+                chown(bootstrap, 0, 0);
+                chmod(bootstrap, 777);
+                ret = execprog("/bin/tar", (const char**)&(const char*[]) { "/bin/tar", "-xvf", bootstrap, "-C", "/", "--preserve-permissions", NULL });
+                if (ret != 0) {
+                    PWN_LOG("Failed to extract bootstrap");
+                    ret = KERN_FAILURE;
+                    goto out;
+                }
+#endif
 
                 fclose(fopen("/.spice_bootstrap_installed", "w+"));
 

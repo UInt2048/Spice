@@ -3,7 +3,7 @@ SHELL            = /bin/bash
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
-VERSION          = 1.0.177
+VERSION          = 1.0.178
 
 BIN              = bin
 RES              = res
@@ -33,13 +33,11 @@ ICONS           := $(wildcard $(RES)/Icon-*.png)
 
 APP_FILES       := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib
 ifeq ($(ARCH_RESULT), armv7)
-BOOTSTRAP_BASE   = $(RES)/bootstrap/32saurik/base
-BOOTSTRAP_EXTRA  = $(RES)/bootstrap/32saurik/extra
+BOOTSTRAP_DIR    = $(RES)/bootstrap/32
 else
-BOOTSTRAP_BASE   = $(RES)/bootstrap/bingner/base
-BOOTSTRAP_EXTRA  = $(RES)/bootstrap/bingner/extra
+BOOTSTRAP_DIR    = $(RES)/bootstrap/64
 endif
-BOOTSTRAP_SRC   := $(wildcard $(BOOTSTRAP_BASE)/*.deb) $(wildcard $(BOOTSTRAP_EXTRA)/*.deb)
+BOOTSTRAP_SRC   := $(wildcard $(BOOTSTRAP_DIR)/*)
 
 IGCC            ?= $(SDK_RESULT) clang -mios-version-min=10.0
 ARCH_GUI        ?= -arch $(ARCH_RESULT)
@@ -149,10 +147,8 @@ $(APP)/Base.lproj/%.storyboardc: $(RES)/%.storyboard | $(APP)/Base.lproj
 	$(IBTOOL) $(IBTOOL_FLAGS) --compilation-directory $(APP)/Base.lproj $<
 
 $(APP): $(BOOTSTRAP_SRC)
-	mkdir -p $@/bootstrap/base
-	mkdir -p $@/bootstrap/extra
-	cp $(BOOTSTRAP_BASE)/*.deb $@/bootstrap/base
-	cp $(BOOTSTRAP_EXTRA)/*.deb $@/bootstrap/extra
+	mkdir -p $@/bootstrap
+	cp $(BOOTSTRAP_DIR)/* $@/bootstrap
 
 $(APP)/Base.lproj:
 	mkdir -p $@
