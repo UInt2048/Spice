@@ -1,1 +1,0 @@
-xcrun -sdk iphoneos11.4

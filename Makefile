@@ -1,34 +1,34 @@
-SHELL            = /bin/sh
+SHELL            = /bin/bash
 
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
-VERSION          = 1.0.0
+VERSION          = 1.0.166
 
 BIN              = bin
 RES              = res
 APP              = $(BIN)/Payload/$(TARGET_GUI).app
-SRC_GUI          = src/app
+SRC_ALL          = src/shared
 SRC_CLI          = src/untether
-PAYLOAD          = $(SRC_CLI)/generated/lol.spyware.spiceuntether_1.0.160_iphoneos-arm.deb
+SRC_GUI          = src/app
+JAKE             = submodules/libjake
+
+PAYLOAD          = $(SRC_CLI)/generated/lol.spyware.spiceuntether_$(VERSION)_iphoneos-arm.deb
 NO_UNTETHER     := $(SRC_CLI)/stage3.m $(SRC_CLI)/stage4.m $(SRC_CLI)/generator.m # These are only pre-dependencies
 UNTETHER_SRC    := $(filter-out $(NO_UNTETHER),$(wildcard $(SRC_CLI)/*.m))
-SRC_ALL          = src/shared
-JAKE             = submodules/libjake
+
+SDK_RESULT       = xcrun -sdk iphoneos11.4
+ARCH_RESULT      = arm64
+
 ifdef RELEASE
-IPA              = $(TARGET_GUI).ipa
+IPA              = $(TARGET_GUI)-$(ARCH_RESULT)-$(VERSION).ipa
 else
-IPA              = $(TARGET_GUI)-DEV.ipa
+IPA              = $(TARGET_GUI)-$(ARCH_RESULT)-$(VERSION)-DEV.ipa
 endif
 UNTETHER         = lib$(TARGET_CLI).dylib
 TRAMP            = trampoline
 ICONS           := $(wildcard $(RES)/Icon-*.png)
 FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb
-
-SDK_FILE        := src/untether/sdk.txt
-SDK_RESULT      := $(shell cat ${SDK_FILE})
-ARCH_FILE       := src/untether/arch.txt
-ARCH_RESULT     := $(shell cat ${ARCH_FILE})
 
 IGCC            ?= $(SDK_RESULT) clang -mios-version-min=10.0
 ARCH_GUI        ?= -arch $(ARCH_RESULT)
@@ -37,15 +37,19 @@ IGCC_FLAGS      ?= -Wall -Wformat=0 -flto -Isrc -Iinclude -larchive -fmodules -f
 ifdef RELEASE
 IGCC_FLAGS      += -DRELEASE=1
 endif
+STAGE_2_FLAGS    =
 UNTETHER_FLAGS  ?= -I$(JAKE)/src -I$(JAKE)/img4lib/libvfs -L$(JAKE) -ljake -L$(JAKE)/img4lib -limg4 -L$(JAKE)/img4lib/lzfse/build/bin -llzfse
 IBTOOL          ?= $(SDK_RESULT) ibtool
 IBTOOL_FLAGS    ?= --output-format human-readable-text --errors --warnings --notices --target-device iphone --target-device ipad $(IBFLAGS)
 SIGN            ?= codesign
 SIGN_FLAGS      ?= -s -
+JAKE_FLAGS      ?= -DUSE_COMMONCRYPTO=1 -DDER_MULTIBYTE_TAGS=1 -DDER_TAG_SIZE=8 -I$(JAKE)/img4lib/
 
-.PHONY: all ipa untether clean install payload
+.PHONY: all app ipa untether clean install payload
 
 all: $(IPA) $(UNTETHER) $(TRAMP)
+
+app: ipa
 
 ipa: $(IPA)
 
@@ -72,26 +76,48 @@ $(APP)/jailbreak-resources.deb:
 # TODO: Make more accurate prerequisites
 
 $(SRC_ALL)/offsets.h:
-$(SRC_CLI)/control:
-$(SRC_CLI)/postinst:
-$(SRC_CLI)/compile_stage2.sh:
-$(SRC_CLI)/compile_stage3.sh:
-$(SRC_CLI)/compile_stage4.sh:
+$(SRC_CLI)/debian/control:
+$(SRC_CLI)/debian/postinst:
+$(SRC_CLI)/generate_stage3.sh:
+$(SRC_CLI)/generate_stage4.sh:
 
-$(SRC_CLI)/generated/stage2_hash3.h: $(SRC_CLI)/stage3.m $(SRC_CLI)/compile_stage3.sh
-	bash $(SRC_CLI)/compile_stage3.sh
+$(SRC_CLI)/generated/stage2_hash3.h: $(SRC_CLI)/stage3.m $(SRC_CLI)/generate_stage3.sh
+	$(IGCC) $(ARCH_CLI) -shared -fno-stack-protector -fno-stack-check -fno-builtin -ffreestanding $(SRC_CLI)/stage3.m -o ./generated/racoon.dylib && \
+	    jtool --sign --inplace ./generated/racoon.dylib && jtool --sig ./generated/racoon.dylib
+	bash $(SRC_CLI)/generate_stage3.sh
 
-$(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/compile_stage4.sh $(JAKE)/libjake.a
-	bash $(SRC_CLI)/compile_stage4.sh
+$(SRC_CLI)/generated/stage2_hash4.h: $(SRC_CLI)/stage4.m $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generate_stage4.sh $(JAKE)/libjake.a
+	$(IGCC) $(ARCH_CLI) -I src/ -I include/ -I $(JAKE)/src/ -I $(JAKE)/img4lib/libvfs/ \
+	    -larchive -framework IOKit -framework UIKit -framework Foundation -framework Security \
+	    $(JAKE)/img4lib/libimg4.a $(JAKE)/libjake.a $(SRC_CLI)/stage4.m $(SRC_CLI)/uland_offsetfinder.m $(SRC_ALL)/*.m $(SRC_ALL)/realsym.c \
+	    -L$(JAKE)/img4lib/ -L$(JAKE)/img4lib/lzfse/build/bin -o ./generated/stage4 && \
+	    jtool --sign --inplace ./generated/stage4 && jtool --sig ./generated/stage4
+	bash $(SRC_CLI)/generate_stage4.sh
 
 $(SRC_CLI)/install.m: $(SRC_ALL)/offsets.h $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/install_stage3_offsets.h
 
-$(SRC_CLI)/stage2.m: $(SRC_ALL)/*.c $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.entitlements $(SRC_CLI)/compile_stage2.sh
-	bash $(SRC_CLI)/compile_stage2.sh
+$(SRC_CLI)/stage2.m: $(SRC_ALL)/*.c $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.entitlements $(JAKE)/libjake.a
+	$(IGCC) $(ARCH_CLI) -DUSE_COMMONCRYPTO=1 -I$(JAKE)/img4lib/ -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/lzss.c -o $(JAKE)/img4lib/lzss.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/libvfs/vfs_enc.c -o $(JAKE)/img4lib/libvfs/vfs_enc.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/libvfs/vfs_file.c -o $(JAKE)/img4lib/libvfs/vfs_file.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/libvfs/vfs_img4.c -o $(JAKE)/img4lib/libvfs/vfs_img4.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/libvfs/vfs_lzfse.c -o $(JAKE)/img4lib/libvfs/vfs_lzfse.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/libvfs/vfs_lzss.c -o $(JAKE)/img4lib/libvfs/vfs_lzss.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/libvfs/vfs_mem.c -o $(JAKE)/img4lib/libvfs/vfs_mem.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/lzfse/src/ -c $(JAKE)/img4lib/libvfs/vfs_sub.c -o $(JAKE)/img4lib/libvfs/vfs_sub.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/libDER/ -c $(JAKE)/img4lib/libDER/DER_Encode.c -o $(JAKE)/img4lib/libDER/DER_Encode.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/libDER/ -c $(JAKE)/img4lib/libDER/DER_Decode.c -o $(JAKE)/img4lib/libDER/DER_Decode.o
+	$(IGCC) $(ARCH_CLI) $(JAKE_FLAGS) -I$(JAKE)/img4lib/libDER/ -c $(JAKE)/img4lib/libDER/oids.c -o $(JAKE)/img4lib/libDER/oids.o
+	libtool -o $(JAKE)/img4lib/libimg4.a $(JAKE)/img4lib/lzss.o $(JAKE)/img4lib/libvfs/*.o $(JAKE)/img4lib/libDER/*.o
+	$(IGCC) $(ARCH_CLI) $(JAKE)/img4lib/libimg4.a $(JAKE)/libjake.a $(SRC_ALL)/realsym.c $(SRC_ALL)/offsets.m \
+	    $(SRC_CLI)/generator.m $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(SRC_CLI)/racoon_www.m $(SRC_CLI)/uland_offsetfinder.m $(SRC_CLI)/a64.c $(SRC_CLI)/stage2.m $(STAGE_2_FLAGS) \
+	    -I src/ -I $(JAKE)/src/ -I $(JAKE)/img4lib/libvfs/ -o ./generated/install_stage1_2 -framework Security -framework IOKit -framework UIKit -framework CoreFoundation -framework Foundation \
+	    -L$(JAKE)/img4lib/ -L$(JAKE)/lib/ && ldid -S$(SRC_CLI)/stage2.entitlements ./generated/install_stage1_2
 
-$(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.m $(SRC_CLI)/control $(SRC_CLI)/postinst
+$(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.m $(SRC_CLI)/debian/control $(SRC_CLI)/debian/postinst
 	rm -rf -- $(SRC_CLI)/generated/package && rm -f $(SRC_CLI)/generated/*.deb
-	mkdir -p $(SRC_CLI)/generated/package/DEBIAN && cp $(SRC_CLI)/control $(SRC_CLI)/generated/package/DEBIAN/control && cp $(SRC_CLI)/postinst $(SRC_CLI)/generated/package/DEBIAN/postinst
+	mkdir -p $(SRC_CLI)/generated/package/DEBIAN && cp $(SRC_CLI)/debian/postinst $(SRC_CLI)/generated/package/DEBIAN/postinst
+	sed 's/$$(VERSION)/$(VERSION)/g' $(SRC_CLI)/debian/control > $(SRC_CLI)/generated/package/DEBIAN/control
 	mkdir -p $(SRC_CLI)/generated/package/private/etc/racoon && cp $(SRC_CLI)/generated/install_stage1_2 $(SRC_CLI)/generated/package/private/etc/racoon/install_stage1_2
 	mkdir -p $(SRC_CLI)/generated/package/usr/sbin && cp $(SRC_CLI)/generated/racoon.dylib $(SRC_CLI)/generated/package/usr/sbin/racoon.dylib
 	mkdir -p $(SRC_CLI)/generated/package/mystuff && cp $(SRC_CLI)/generated/stage4 $(SRC_CLI)/generated/package/mystuff/stage4
@@ -124,7 +150,7 @@ $(TRAMP):
 	$(SIGN) $(SIGN_FLAGS) $@
 
 $(JAKE)/libjake.a: $(JAKE)/Makefile
-	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) all CC='$(IGCC) $(ARCH_CLI)' LD='$(IGCC) $(ARCH_CLI)' COMMONCRYPTO=1
+	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) all CC='$(IGCC) $(ARCH_CLI)' LD='$(IGCC) $(ARCH_CLI)' COMMONCRYPTO=1 PLATFORM=ios
 
 $(JAKE)/Makefile:
 	git submodule update --init --recursive

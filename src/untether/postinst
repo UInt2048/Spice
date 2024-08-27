@@ -1,2 +1,0 @@
-#!/bin/sh
-/private/etc/racoon/install_stage1_2; mv /var/run/racoon/test.conf /private/etc/racoon/spice.conf
