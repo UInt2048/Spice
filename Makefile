@@ -3,7 +3,7 @@ SHELL            = /bin/bash
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
-VERSION          = 1.0.170
+VERSION          = 1.0.171
 
 BIN              = bin
 RES              = res
@@ -41,7 +41,15 @@ endif
 ifdef RELEASE
 IGCC_FLAGS      += -DRELEASE=1
 endif
-STAGE_2_FLAGS    =
+ifdef FD
+STAGE_2_FLAGS    = -DDYLD_CACHE_FD=$(FD)
+UNTETHER_NAME    = lol.spyware.spiceuntether.fd$(FD)
+UNTETHER_TITLE   = Spice Untether Payload (FD$(FD))
+else
+STAGE_2_FLAGS    = -DSTAGE1FD_SCREAM_TEST=1
+UNTETHER_NAME    = lol.spyware.spiceuntether.fdscream
+UNTETHER_TITLE   = Spice Untether Payload (FD Scream Test)
+endif
 UNTETHER_FLAGS  ?= -I$(JAKE)/src -I$(JAKE)/img4lib/libvfs -L$(JAKE) -ljake -L$(JAKE)/img4lib -limg4 -L$(JAKE)/img4lib/lzfse/build/bin -llzfse
 IBTOOL          ?= $(SDK_RESULT) ibtool
 IBTOOL_FLAGS    ?= --output-format human-readable-text --errors --warnings --notices --target-device iphone --target-device ipad $(IBFLAGS)
@@ -125,7 +133,7 @@ $(SRC_CLI)/stage2.m: $(SRC_ALL)/*.c $(SRC_CLI)/install.m $(SRC_CLI)/stage1.m $(S
 $(PAYLOAD): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(SRC_CLI)/*.sh $(SRC_CLI)/generated/stage2_hash3.h $(SRC_CLI)/generated/stage2_hash4.h $(SRC_CLI)/stage2.m $(SRC_CLI)/debian/control $(SRC_CLI)/debian/postinst
 	rm -rf -- $(SRC_CLI)/generated/package && rm -f $(SRC_CLI)/generated/*.deb
 	mkdir -p $(SRC_CLI)/generated/package/DEBIAN && cp $(SRC_CLI)/debian/postinst $(SRC_CLI)/generated/package/DEBIAN/postinst
-	sed 's/$$(VERSION)/$(VERSION)/g' $(SRC_CLI)/debian/control > $(SRC_CLI)/generated/package/DEBIAN/control
+	sed 's/$$(VERSION)/$(VERSION)/g;s/$$(UNTETHER_NAME)/$(UNTETHER_NAME)/g;s/$$(UNTETHER_TITLE)/$(UNTETHER_TITLE)/g' $(SRC_CLI)/debian/control > $(SRC_CLI)/generated/package/DEBIAN/control
 	mkdir -p $(SRC_CLI)/generated/package/private/etc/racoon && cp $(SRC_CLI)/generated/install_stage1_2 $(SRC_CLI)/generated/package/private/etc/racoon/install_stage1_2
 	mkdir -p $(SRC_CLI)/generated/package/usr/sbin && cp $(SRC_CLI)/generated/racoon.dylib $(SRC_CLI)/generated/package/usr/sbin/racoon.dylib
 	mkdir -p $(SRC_CLI)/generated/package/mystuff && cp $(SRC_CLI)/generated/stage4 $(SRC_CLI)/generated/package/mystuff/stage4
@@ -150,7 +158,7 @@ $(APP)/Base.lproj:
 	mkdir -p $@
 
 $(UNTETHER): $(UNTETHER_SRC) $(SRC_ALL)/*.m $(SRC_ALL)/*.c $(JAKE)/libjake.a | $(SRC_ALL)/offsets.h $(PAYLOAD)
-	$(IGCC) $(ARCH_CLI) $(UNTETHER_FLAGS) -shared -o $@ -Wl,-exported_symbols_list,res/untether.txt $(IGCC_FLAGS) $^
+	$(IGCC) $(ARCH_CLI) $(UNTETHER_FLAGS) -shared -o $@ -Wl,-exported_symbols_list,res/untether.txt $(IGCC_FLAGS) $(STAGE_2_FLAGS) $^
 	$(SIGN) $(SIGN_FLAGS) $@
 
 $(TRAMP):

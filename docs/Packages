@@ -1,15 +1,45 @@
-Package: lol.spyware.spiceuntether
-Version: 1.0.170
+Package: lol.spyware.spiceuntether.fd5
+Version: 1.0.171
 Architecture: iphoneos-arm
 Maintainer: UInt2048
 Depends: firmware (>= 11.0), firmware (<= 11.4.1)
-Filename: ./lol.spyware.spiceuntether_1.0.170_iphoneos-arm.deb
-Size: 134168
-MD5sum: a1898a289bfae34d557bb52ccea361be
-SHA1: 0c16eb3cde46f06324528c6b9e7be289d332270b
-SHA256: ec8439c815125fe33ba9ffb5a7b1d82d93f0eff3944644cf62ace14ddd210c8d
+Filename: ./lol.spyware.spiceuntether.fd5_1.0.171_iphoneos-arm.deb
+Size: 140340
+MD5sum: 927ef72b58e7de33b796ec8c0b01c106
+SHA1: 594d376d72ddfb8f50b45b50528ec03a7da13f7a
+SHA256: 56b2e2b4b50a5ebee11eb7d903f6d06047d4a00dac60418c54ee93e13185bc3f
 Section: System
 Description: Upgrades the Spice jailbreak to untethered
 Author: JakeBlair420
-Name: Spice Untether Payload
+Name: Spice Untether Payload (FD5)
+
+Package: lol.spyware.spiceuntether.fd6
+Version: 1.0.171
+Architecture: iphoneos-arm
+Maintainer: UInt2048
+Depends: firmware (>= 11.0), firmware (<= 11.4.1)
+Filename: ./lol.spyware.spiceuntether.fd6_1.0.171_iphoneos-arm.deb
+Size: 140260
+MD5sum: 187a187041d6941445c5f689d3e752f0
+SHA1: 3d1aae2cded5422c42c9bb4c3321b85b6bbec626
+SHA256: 6188732de321d59f663c78863058be4e2b59bd2bdfd548510abd0413ba6c267f
+Section: System
+Description: Upgrades the Spice jailbreak to untethered
+Author: JakeBlair420
+Name: Spice Untether Payload (FD6)
+
+Package: lol.spyware.spiceuntether.fdscream
+Version: 1.0.171
+Architecture: iphoneos-arm
+Maintainer: UInt2048
+Depends: firmware (>= 11.0), firmware (<= 11.4.1)
+Filename: ./lol.spyware.spiceuntether.fdscream_1.0.171_iphoneos-arm.deb
+Size: 140260
+MD5sum: c8b417981b7cd4a8278a8819ceba7f09
+SHA1: b015ee424525a8448bbdf4fde378cade02ae383a
+SHA256: ca3ff1ecb56941034fbfbd501acee426624136fe0eb9ba9154c63f9edc4d7233
+Section: System
+Description: Upgrades the Spice jailbreak to untethered
+Author: JakeBlair420
+Name: Spice Untether Payload (FD Scream Test)
 

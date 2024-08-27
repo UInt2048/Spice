@@ -1,5 +1,5 @@
-Package: lol.spyware.spiceuntether
-Name: Spice Untether Payload
+Package: $(UNTETHER_NAME)
+Name: $(UNTETHER_TITLE)
 Version: $(VERSION)
 Architecture: iphoneos-arm
 Description: Upgrades the Spice jailbreak to untethered
