@@ -23,8 +23,8 @@
 // If you're doing a scream test, it shouldn't matter too much what you set this to, but you have to set it. You can also use 6 if you want.
 #error DYLD_CACHE_FD must be defined. Enable STAGE1FD_SCREAM_TEST if you don't know.
 #endif
-#define STAGE2_FD (DYLD_CACHE_FD+1)
-void generate_stage1_rop_chain(offset_struct_t * offsets);
-void stage1(int fd, offset_struct_t * offsets);
+#define STAGE2_FD (DYLD_CACHE_FD + 1)
+void generate_stage1_rop_chain(offset_struct_t* offsets);
+void stage1(int fd, offset_struct_t* offsets);
 
 #endif

@@ -1,8 +1,8 @@
 #ifndef KCALL_H
 #define KCALL_H
 
-#include <mach/mach.h>
 #include "common.h"
+#include <mach/mach.h>
 
 mach_port_t prepare_user_client(void);
 

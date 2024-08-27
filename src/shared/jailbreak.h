@@ -1,8 +1,8 @@
 #ifndef JAILBREAK_H
 #define JAILBREAK_H
 
-#include <stdint.h>
 #include <mach/mach.h>
+#include <stdint.h>
 
 #include "common.h"
 

