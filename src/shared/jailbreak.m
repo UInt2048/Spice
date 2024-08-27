@@ -13,7 +13,6 @@
 #include "kmem.h"
 #include "root.h"
 #include "kcall.h"
-#include "cs_blobs.h"
 #include "kutils.h"
 #include "root_fs.h"
 #include "nonce.h"

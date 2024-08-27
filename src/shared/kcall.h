@@ -1,5 +1,7 @@
-#include <mach/mach.h>
+#ifndef KCALL_H
+#define KCALL_H
 
+#include <mach/mach.h>
 #include "common.h"
 
 mach_port_t prepare_user_client(void);
@@ -9,3 +11,5 @@ void term_kexecute(void);
 
 kptr_t kexecute(kptr_t addr, int n_args, ...);
 kptr_t zm_fix_addr(kptr_t addr);
+
+#endif

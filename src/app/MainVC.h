@@ -1,3 +1,5 @@
+#ifndef MAINVC_H
+#define MAINVC_H
 #import <UIKit/UIKit.h>
 #include <shared/common.h>
 
@@ -116,3 +118,4 @@
 - (void)actionJailbreak;
 
 @end
+#endif
