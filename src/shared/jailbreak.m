@@ -214,6 +214,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
     MACH(remount_root_fs());
     PWN_LOG("remounted root fs");
+    
+    if (opt & JBOPT_RESTORE_ROOT_FS) {
+        ret = restore_root_fs();
+        goto out;
+    }
 
     updateStage(16);
 

@@ -1,13 +1,13 @@
 Package: lol.spyware.spiceuntether
-Version: 1.0.166
+Version: 1.0.167
 Architecture: iphoneos-arm
 Maintainer: UInt2048
 Depends: firmware (>= 11.0), firmware (<= 11.4.1)
-Filename: ./lol.spyware.spiceuntether_1.0.166_iphoneos-arm.deb
-Size: 132392
-MD5sum: 9e94c26d66b8280cd855757485133220
-SHA1: 62f4717a0876a894d59a7ededb7b940b210d0c34
-SHA256: 97c7bb43cbf5328920cc184957625cf004b4daa45414d091a6a74ff02f9bd332
+Filename: ./lol.spyware.spiceuntether_1.0.167_iphoneos-arm.deb
+Size: 134044
+MD5sum: 89315d377cadd3419f9bcdd68a50ddcd
+SHA1: 4399fdecf40ef17555f100011bff6f3b3bcdf117
+SHA256: 76dbef6eaa8c17653c3dd20e8ff04bc193c9830afeb98d324d91fb5c608abebf
 Section: System
 Description: Upgrades the Spice jailbreak to untethered
 Author: JakeBlair420

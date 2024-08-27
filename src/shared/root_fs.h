@@ -1,4 +1,5 @@
 
 int snapshot_count(const char *path);
 int mount_unionfs(const char *dmg_path);
-int remount_root_fs(void);
+kern_return_t remount_root_fs(void);
+kern_return_t restore_root_fs(void);

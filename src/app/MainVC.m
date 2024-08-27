@@ -12,9 +12,10 @@ void sendLog(void* controller, NSString* log) {
 
 @implementation MainVC
 
-UIButton *jbButton;
+UIButton *jbButton, *restoreButton;
 UILabel *spiceLabel, *titleLabel;
 bool hasJailbroken = false;
+uint32_t jailbreakFlags = 0;
 
 -(void)showLog:(NSString *)log
 {
@@ -65,6 +66,17 @@ bool hasJailbroken = false;
     [jbButton setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
     jbButton.titleLabel.font = [UIFont systemFontOfSize:30];
     [jbButton addTarget:self action:@selector(actionJailbreak) forControlEvents:UIControlEventTouchUpInside];
+   
+#ifdef __LP64__ 
+    restoreButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [restoreButton setTitle:@"Restore RootFS" forState:UIControlStateNormal];
+    [restoreButton setTitleColor:[UIColor colorWithRed:110.0/255.0 green:59.0/255.0 blue:38.0/255.0 alpha:1.0] forState:UIControlStateNormal];
+    [restoreButton setTitleColor:[UIColor colorWithRed:35.0/255.0 green:75.0/255.0 blue:155.0/255.0 alpha:1.0] forState:UIControlStateHighlighted];
+    [restoreButton setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
+    restoreButton.titleLabel.font = [UIFont systemFontOfSize:30];
+    [restoreButton addTarget:self action:@selector(actionRootFS) forControlEvents:UIControlEventTouchUpInside];
+#endif
     
     spiceLabel = [UILabel new];
     spiceLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -96,6 +108,12 @@ bool hasJailbroken = false;
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:jbButton attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:jbButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.7 constant:0.0]];
 
+#ifdef __LP64__
+    [self.view addSubview:restoreButton];
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:restoreButton attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:restoreButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.5 constant:0.0]];
+#endif
+
     [self.view addSubview:spiceLabel];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:spiceLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:spiceLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:0.4 constant:0.0]];
@@ -106,6 +124,18 @@ bool hasJailbroken = false;
 }
 
 - (void)actionJailbreak
+{
+    jailbreakFlags &= ~JBOPT_RESTORE_ROOT_FS;
+    [self actionJailbreakInternal];
+}
+
+- (void)actionRootFS
+{
+    jailbreakFlags |= JBOPT_RESTORE_ROOT_FS;
+    [self actionJailbreakInternal];
+}
+
+- (void)actionJailbreakInternal
 {
     if (hasJailbroken)
     {
@@ -119,7 +149,7 @@ bool hasJailbroken = false;
     [jbButton setTitle:@"Jailbreaking..." forState:UIControlStateNormal];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(void) {
-        int ret = jailbreak(0, self, &sendLog);
+        int ret = jailbreak(jailbreakFlags, self, &sendLog);
         NSLog(@"jailbreak ret: %d", ret);
 
         if (ret != 0) {

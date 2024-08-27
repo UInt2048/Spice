@@ -3,7 +3,7 @@ SHELL            = /bin/bash
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
-VERSION          = 1.0.166
+VERSION          = 1.0.167
 
 BIN              = bin
 RES              = res
@@ -28,7 +28,7 @@ endif
 UNTETHER         = lib$(TARGET_CLI).dylib
 TRAMP            = trampoline
 ICONS           := $(wildcard $(RES)/Icon-*.png)
-FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb
+FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb uicache
 
 IGCC            ?= $(SDK_RESULT) clang -mios-version-min=10.0
 ARCH_GUI        ?= -arch $(ARCH_RESULT)
@@ -72,6 +72,10 @@ $(APP)/bootstrap.tar.lzma:
 $(APP)/jailbreak-resources.deb:
 	echo Copying file to $@
 	cp $(RES)/jailbreak-resources.deb $@
+
+$(APP)/uicache:
+	echo Copying file to $@
+	cp $(RES)/uicache $@
 
 # TODO: Make more accurate prerequisites
 
