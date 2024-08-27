@@ -287,6 +287,33 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         }                                       \
     } while (0)
 
+#define EXTRACT_RESOURCES(orig, dest, extract)                                     \
+    do {                                                                           \
+        NSString* src = [NSString stringWithFormat:@"%s/%s", bundle_path, orig];   \
+        NSArray* files = [fileMgr contentsOfDirectoryAtPath:src error:nil];        \
+        for (NSString * file in files) {                                           \
+            NSString* srcFile = [NSString stringWithFormat:@"%@/%@", src, file];   \
+            NSString* destFile = [NSString stringWithFormat:@"%s/%@", dest, file]; \
+            const char* destString = [destFile UTF8String];                        \
+            unlink(destString);                                                    \
+            [fileMgr copyItemAtPath:srcFile toPath:destFile error:nil];            \
+            chown(destString, 0, 0);                                               \
+            chmod(destString, 755);                                                \
+            if (access(destString, F_OK) != 0) {                                   \
+                PWN_LOG("Failed to find %s", destString);                          \
+                ret = KERN_FAILURE;                                                \
+                goto out;                                                          \
+            }                                                                      \
+            PWN_LOG("Extracting %s", destString);                                  \
+            if (!extract(destFile)) {                                              \
+                PWN_LOG("Failed to extract %s", destString);                       \
+                ret = KERN_FAILURE;                                                \
+                goto out;                                                          \
+            }                                                                      \
+            sync();                                                                \
+        }                                                                          \
+    } while (0)
+
     if (access("/var/spice", F_OK) != 0) {
         MACH(mkdir("/var/spice", 0755));
 
@@ -300,9 +327,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     {
         if ((opt & JBOPT_POST_ONLY) == 0) {
             if (access("/.spice_bootstrap_installed", F_OK) != 0) {
-                EXTRACT_RESOURCE("bootstrap.tar.lzma", "/var/spice/bootstrap.tar.lzma", extractArchive);
-
-                EXTRACT_RESOURCE("jailbreak-resources.deb", "/var/spice/jailbreak-resources.deb", extractDeb);
+                EXTRACT_RESOURCES("bootstrap/base", "/var/spice", extractDeb);
 
                 fclose(fopen("/.spice_bootstrap_installed", "w+"));
 
@@ -317,13 +342,16 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                         goto out;
                     }
 
+                    inject_trust("/usr/bin/kill");
+                    inject_trust("/usr/bin/killall");
+
                     ret = execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "-SIGSTOP", "cfprefsd", NULL });
-                    if (ret == 85) /* Rejected by amfid */ {
-                        PWN_LOG("killall rejected by amfid?");
-                        ret = KERN_FAILURE;
-                        goto out;
-                    } else if (ret != 0) {
-                        PWN_LOG("failed to run killall(1): %d", ret);
+                    if (ret != 0) {
+                        if (ret == EBADEXEC) /* 85 */ {
+                            PWN_LOG("/usr/bin/killall rejected by amfid");
+                        } else {
+                            PWN_LOG("failed to run killall(1): %s", strerror(ret));
+                        }
                         ret = KERN_FAILURE;
                         goto out;
                     }
@@ -334,7 +362,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                     ret = execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "-SIGSTOP", "cfprefsd", NULL });
                     if (ret != KERN_SUCCESS) {
-                        PWN_LOG("failed to run killall(2): %d", ret);
+                        PWN_LOG("failed to run killall(2): %s", strerror(ret));
                         ret = KERN_FAILURE;
                         goto out;
                     }
@@ -345,9 +373,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                 {
                     PWN_LOG("running uicache (this will take some time)...");
 
+                    inject_trust("/usr/bin/uicache");
+
                     ret = execprog("/usr/bin/uicache", NULL);
                     if (ret != 0) {
-                        PWN_LOG("failed to run uicache!");
+                        PWN_LOG("failed to run uicache: %d", ret);
                         ret = KERN_FAILURE;
                         goto out;
                     }
@@ -364,14 +394,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     }
 
     {
-        // check if substrate is not installed & install it from a deb file
+        // check if substrate is not installed
         if ((opt & JBOPT_POST_ONLY) == 0) {
             if (access("/usr/libexec/substrate", F_OK) != 0) {
-                PWN_LOG("substrate was not found? installing it...");
-
-                EXTRACT_RESOURCE("mobilesubstrate.deb", "/var/spice/mobilesubstrate.deb", extractDeb);
-
-                PWN_LOG("finished installing substrate");
+                PWN_LOG("Substrate not found!");
+                return KERN_FAILURE;
             }
         }
     }
@@ -384,7 +411,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         if (access("/Library/MobileSubstrate", F_OK) != 0) {
             mkdir("/Library/MobileSubstrate", 0755);
         }
-        if (access("/Lbirary/MobileSubstrate/ServerPlugins", F_OK) != 0) {
+        if (access("/Library/MobileSubstrate/ServerPlugins", F_OK) != 0) {
             mkdir("/Library/MobileSubstrate/ServerPlugins", 0755);
         }
 

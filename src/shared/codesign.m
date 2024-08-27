@@ -115,7 +115,7 @@ int inject_trust(const char* path)
     int total_struct_size = sizeof(struct trust_chain) + total_hashes_size;
     struct trust_chain* chain_buf = (struct trust_chain*)malloc(total_struct_size);
 
-    chain_buf->next = rk64(offs.data.trust_cache + kernel_slide);
+    chain_buf->next = kread_kptr(offs.data.trust_cache + kernel_slide);
     *(uint64_t*)&chain_buf->uuid[0] = 0xabadbabeabadbabe;
     *(uint64_t*)&chain_buf->uuid[8] = 0xabadbabeabadbabe;
     chain_buf->count = num_found_hashes;
@@ -133,9 +133,9 @@ int inject_trust(const char* path)
         LOG("got cdhash (%zu): %s", i, msg);
     }
 
-    uint64_t kernel_trust = kalloc(total_struct_size);
+    kptr_t kernel_trust = kalloc(total_struct_size);
     kwrite(kernel_trust, chain_buf, total_struct_size);
-    wk64(offs.data.trust_cache + kernel_slide, kernel_trust);
+    kwrite_kptr(offs.data.trust_cache + kernel_slide, kernel_trust);
 
     free(hash_array);
     free(chain_buf);

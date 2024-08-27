@@ -4,6 +4,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef __LP64__
+typedef uint64_t kptr_t;
+#else
+typedef uint32_t kptr_t;
+#endif
+
 typedef struct {
     const char* name;
     uint64_t file_off;
@@ -15,7 +21,7 @@ typedef struct {
 typedef char hash_t[20];
 
 struct trust_chain {
-    uint64_t next;
+    kptr_t next;
     unsigned char uuid[16];
     unsigned int count;
     hash_t hash[0];

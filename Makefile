@@ -3,7 +3,7 @@ SHELL            = /bin/bash
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
-VERSION          = 1.0.176
+VERSION          = 1.0.177
 
 BIN              = bin
 RES              = res
@@ -30,7 +30,16 @@ endif
 UNTETHER         = lib$(TARGET_CLI).dylib
 TRAMP            = trampoline
 ICONS           := $(wildcard $(RES)/Icon-*.png)
-FILES           := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib bootstrap.tar.lzma jailbreak-resources.deb
+
+APP_FILES       := $(TARGET_GUI) Info.plist Base.lproj/LaunchScreen.storyboardc $(ICONS:$(RES)/%=%) Unrestrict.dylib
+ifeq ($(ARCH_RESULT), armv7)
+BOOTSTRAP_BASE   = $(RES)/bootstrap/32saurik/base
+BOOTSTRAP_EXTRA  = $(RES)/bootstrap/32saurik/extra
+else
+BOOTSTRAP_BASE   = $(RES)/bootstrap/bingner/base
+BOOTSTRAP_EXTRA  = $(RES)/bootstrap/bingner/extra
+endif
+BOOTSTRAP_SRC   := $(wildcard $(BOOTSTRAP_BASE)/*.deb) $(wildcard $(BOOTSTRAP_EXTRA)/*.deb)
 
 IGCC            ?= $(SDK_RESULT) clang -mios-version-min=10.0
 ARCH_GUI        ?= -arch $(ARCH_RESULT)
@@ -70,21 +79,12 @@ untether: $(UNTETHER) $(TRAMP)
 
 payload: $(PAYLOAD)
 
-$(IPA): $(addprefix $(APP)/, $(FILES))
+$(IPA): $(addprefix $(APP)/, $(APP_FILES))
 	cd $(BIN) && zip -x .DS_Store -qr9 ../$@ Payload
 
-# TODO: make this less shit
-$(APP)/Unrestrict.dylib:
-	echo Copying file to $@
-	cp $(RES)/Unrestrict.dylib $@
-
-$(APP)/bootstrap.tar.lzma:
-	echo Copying file to $@
-	cp $(RES)/bootstrap.tar.lzma $@
-
-$(APP)/jailbreak-resources.deb:
-	echo Copying file to $@
-	cp $(RES)/jailbreak-resources.deb $@
+$(APP)/Unrestrict.dylib: $(RES)/Unrestrict.dylib
+	echo Copying file from $^ to $@
+	cp $^ $@
 
 # TODO: Make more accurate prerequisites
 
@@ -148,8 +148,11 @@ $(APP)/Icon-%.png: $(RES)/$(@F) | $(APP)
 $(APP)/Base.lproj/%.storyboardc: $(RES)/%.storyboard | $(APP)/Base.lproj
 	$(IBTOOL) $(IBTOOL_FLAGS) --compilation-directory $(APP)/Base.lproj $<
 
-$(APP):
-	mkdir -p $@
+$(APP): $(BOOTSTRAP_SRC)
+	mkdir -p $@/bootstrap/base
+	mkdir -p $@/bootstrap/extra
+	cp $(BOOTSTRAP_BASE)/*.deb $@/bootstrap/base
+	cp $(BOOTSTRAP_EXTRA)/*.deb $@/bootstrap/extra
 
 $(APP)/Base.lproj:
 	mkdir -p $@

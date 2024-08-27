@@ -192,8 +192,16 @@ kern_return_t dunk_on_mac_mount()
         return KERN_FAILURE;
     }
 
+    LOG("old v_flag: %x", v_flag);
+
     // unset rootfs flag
-    wk32(v_mount + OFFSET_V_MOUNT_MNT_FLAG, v_flag & ~MNT_ROOTFS);
+    wk32(v_mount + OFFSET_V_MOUNT_MNT_FLAG, v_flag & ~(MNT_NOSUID | MNT_RDONLY | MNT_ROOTFS));
+
+#ifndef __LP64__
+    ret = patch_device_vnode("/dev/disk0s1s1");
+    if (ret != KERN_SUCCESS)
+        return ret;
+#endif
 
     // remount
     struct statfs output;
@@ -203,6 +211,7 @@ kern_return_t dunk_on_mac_mount()
     LOG("mount %s ret: %d", output.f_fstypename, ret);
 
     // test for failure
+    sync();
     int fd = open("/.spice_mount_test", O_CREAT | O_RDWR, 0644);
     if (fd < 0) {
         LOG("failed to mount");
@@ -210,6 +219,7 @@ kern_return_t dunk_on_mac_mount()
     }
     remove("/.spice_mount_test");
     close(fd);
+    sync();
 
     // read back new flags
     v_mount = kread_kptr(rootfs_vnode + OFFSET_VNODE_V_MOUNT);
