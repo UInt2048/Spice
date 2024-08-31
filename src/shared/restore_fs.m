@@ -19,9 +19,16 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <sys/mount.h>
-#include <sys/snapshot.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#if __has_include(<sys/snapshot.h>)
+#include <sys/snapshot.h>
+#else
+int fs_snapshot_list(int dirfd, struct attrlist* alist, void* attrbuf, size_t bufsize,
+    uint32_t flags);
+int fs_snapshot_rename(int dirfd, const char* old, const char* new, uint32_t flags);
+#endif
 
 #include "common.h"
 #include "iokit.h"
