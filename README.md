@@ -29,7 +29,9 @@ The following devices are also present in offsets.m (and the binaries in /docs) 
 * **iPhone 5S (GSM) (iPhone6,1), iOS 11.2.6**
 * **iPhone 6 Plus (iPhone7,1), iOS 11.2.6**
 * **iPhone 6 (iPhone7,2), iOS 11.4**
+* **iPhone 6S (iPhone8,1), iOS 11.4.1**
 * **iPhone SE (1st gen) (iPhone8,4), iOS 11.4.1**
+* **iPod touch 6 (iPod7,1), iOS 11.4.1**
 
 Any other device will require offsets to be added. PRs are welcomed to speed this up, but an actual device will be needed to provide the final offset (`DYLD_CACHE_FD`) if you desire support.
 
