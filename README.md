@@ -15,9 +15,21 @@ Spice can't help until you can run the vulnerable iOS 11 code (`/usr/sbin/racoon
 
 ## Device support
 
-At present, the repo is configured to build for the **iPhone 6S Plus (iPhone8,2) on 11.3.1**. The binaries in /docs are ONLY built for this device + iOS.
+<!-- Sort this list by iOS version then alphabetically by internal name -->
 
-The **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.1.2**, **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.3.1**, **iPhone SE (1st gen) (iPhone8,4), iOS 11.3**, and **iPhone SE (1st gen) (iPhone8,4), iOS 11.4** already have offsets and may build fine if the appropriate support is turned on in offsets.h.
+The following devices are currently present in offsets.m (and the binaries in /docs) **and** have been verified on a real device:
+* **iPhone SE (1st gen) (iPhone8,4), iOS 11.3**
+* **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.3.1**
+* **iPhone 6S Plus (iPhone8,2) on 11.3.1**
+* **iPhone SE (1st gen) (iPhone8,4), iOS 11.4**
+
+The following devices are also present in offsets.m (and the binaries in /docs) but have **not** been verified on a real device:
+* **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.1.2**
+* **iPad mini 4 (Wi-Fi) (iPad5,1) on iOS 11.2.1**
+* **iPhone 5S (GSM) (iPhone6,1), iOS 11.2.6**
+* **iPhone 6 Plus (iPhone7,1), iOS 11.2.6**
+* **iPhone 6 (iPhone7,2), iOS 11.4**
+* **iPhone SE (1st gen) (iPhone8,4), iOS 11.4.1**
 
 Any other device will require offsets to be added. PRs are welcomed to speed this up, but an actual device will be needed to provide the final offset (`DYLD_CACHE_FD`) if you desire support.
 
@@ -25,8 +37,10 @@ Binaries are added to the repo by copying the DEB file in /generated and the Spi
 
 ## Installation
 
-Obviously, just run `make` to create all generated files (the makefile requires macOS, use a VM or something if you need it).
-If you have an issue with the makefile, forcibly modify the makefile of img4lib to enable `-DUSE_LIBCOMPRESSION`
+You can simply run `make clean all` to create all generated files (the makefile requires macOS, use a VM or something if you need it).
+
+This will generate a warning that the scream test is enabled, but you can ignore that for now.
+Once you know the stage 1 file descriptor (keep reading for more on this), run `FD=5 make clean all`, replacing 5 with the value you find.
 
 The app is a *semi-untethered jailbreak*. The app will not install the untether payload.
 

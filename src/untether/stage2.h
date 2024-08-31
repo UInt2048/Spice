@@ -2,6 +2,7 @@
 #include "img.h"
 #include "patchfinder.h"
 #include <shared/iokit.h>
+#include <shared/offsets.h>
 
 #ifndef STAGE2_H
 #define STAGE2_H
@@ -106,5 +107,6 @@ typedef volatile struct {
 #define NENT 1
 
 uint64_t get_addr_from_name(offset_struct_t* offsets, char* name);
-void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, char* base_dir);
+void stage2(jake_img_t kernel_symbols, offset_struct_t* offsets, offsets_t* lib_offsets, char* base_dir);
+
 #endif

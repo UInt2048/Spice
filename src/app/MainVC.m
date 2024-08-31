@@ -1,22 +1,72 @@
-#include <shared/jailbreak.h>
-#include <shared/sbx.h>
-#include <shared/utils.h>
-
 #import <CoreFoundation/CoreFoundation.h>
+#include <UIKit/UIDevice.h>
+
+#include <shared/common.h>
+#include <shared/offsets.h>
+#include <untether/offsets.h>
+
+#include <shared/jailbreak.h> // for jailbreak function
+#include <shared/utils.h> // for respring function
 
 #import "MainVC.h"
 
-void sendLog(void* controller, NSString* log)
+#define UICOLOR(r, g, b, a) [UIColor colorWithRed:(CGFloat)(r / 255.0) green:(CGFloat)(g / 255.0) blue:(CGFloat)(b / 255.0) alpha:(CGFloat)a]
+#define CGCOLOR(r, g, b, a) (id) UICOLOR(r, g, b, a).CGColor
+#define CONSTRAINT(subview, x, y)                                                                                                                                                                                                                     \
+    do {                                                                                                                                                                                                                                              \
+        [self.view addSubview:subview];                                                                                                                                                                                                               \
+        [self.view addConstraint:[NSLayoutConstraint constraintWithItem:subview attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:(CGFloat)x constant:(CGFloat)0.0]]; \
+        [self.view addConstraint:[NSLayoutConstraint constraintWithItem:subview attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:(CGFloat)y constant:(CGFloat)0.0]]; \
+    } while (0)
+
+#define addButton(button, title, color1, color2, fontSize, selector, x, y)                    \
+    do {                                                                                      \
+        button.translatesAutoresizingMaskIntoConstraints = NO;                                \
+        [button setTitle:title forState:UIControlStateNormal];                                \
+        [button setTitleColor:color1 forState:UIControlStateNormal];                          \
+        [button setTitleColor:color2 forState:UIControlStateHighlighted];                     \
+        [button setBackgroundColor:UICOLOR(0, 0, 0, 0.0)];                                    \
+        button.titleLabel.font = [UIFont systemFontOfSize:fontSize];                          \
+        [button addTarget:self action:selector forControlEvents:UIControlEventTouchUpInside]; \
+        CONSTRAINT(button, x, y);                                                             \
+    } while (0)
+
+#define addLabel(label, title, color, fontSize, x, y)         \
+    do {                                                      \
+        label.translatesAutoresizingMaskIntoConstraints = NO; \
+        label.text = title;                                   \
+        label.textColor = color;                              \
+        [label setBackgroundColor:UICOLOR(0, 0, 0, 0.0)];     \
+        label.font = [UIFont systemFontOfSize:fontSize];      \
+        CONSTRAINT(label, x, y);                              \
+    } while (0)
+
+#define addTextView(textView, title, color, fontSize, frameRect, centerPos)      \
+    do {                                                                         \
+        textView.translatesAutoresizingMaskIntoConstraints = NO;                 \
+        textView.backgroundColor = UICOLOR(0, 0, 0, 0.7);                        \
+        textView.text = title;                                                   \
+        textView.textColor = color;                                              \
+        textView.editable = NO;                                                  \
+        textView.scrollEnabled = YES;                                            \
+        textView.textContainerInset = UIEdgeInsetsMake(0, 15, 15, 15);           \
+        textView.font = [UIFont fontWithName:@"Courier" size:(CGFloat)fontSize]; \
+        textView.frame = frameRect;                                              \
+        textView.center = centerPos;                                             \
+        [self.view addSubview:textView];                                         \
+    } while (0)
+
+static void sendLog(void* controller, NSString* log)
 {
     [(MainVC*)controller showLog:log];
 }
 
 @implementation MainVC
 
-UIButton *jbButton, *restoreButton;
-UILabel *spiceLabel, *titleLabel;
-bool hasJailbroken = false;
-uint32_t jailbreakFlags = 0;
+static UIButton *jbButton, *restoreButton;
+static UILabel *spiceLabel, *titleLabel;
+static bool hasJailbroken = false;
+static uint32_t jailbreakFlags = 0;
 
 - (void)showLog:(NSString*)log
 {
@@ -37,7 +87,7 @@ uint32_t jailbreakFlags = 0;
 
 - (id)init
 {
-    LOG("pullup");
+    LOG("Entered Spice init method");
 
     id ret = [super initWithNibName:nil bundle:nil];
     self.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Jailbreak" image:nil tag:1];
@@ -50,9 +100,36 @@ uint32_t jailbreakFlags = 0;
     [super viewWillAppear:animated];
     CAGradientLayer* gradient = [CAGradientLayer layer];
     gradient.frame = self.view.bounds;
-    gradient.colors = @[ (id)[UIColor colorWithRed:92.0 / 255.0 green:201.0 / 255.0 blue:59.0 / 255.0 alpha:1.0].CGColor,
-        (id)[UIColor colorWithRed:42.0 / 255.0 green:100.0 / 255.0 blue:25.0 / 255.0 alpha:1.0].CGColor ];
+    gradient.colors = @[ CGCOLOR(92, 201, 59, 1.0), CGCOLOR(42, 100, 25, 1.0) ];
     [self.view.layer insertSublayer:gradient atIndex:0];
+}
+
+// Load everything
+
+- (NSString*)getInitialLogText
+{
+    NSString* text;
+
+    offsets_t* off1 = malloc(sizeof(offsets_t));
+    memset(off1, 0, sizeof(offsets_t));
+    offset_struct_t* off2 = malloc(sizeof(offset_struct_t));
+    memset(off2, 0, sizeof(offset_struct_t));
+
+    if (populate_offsets(off1, off2)) {
+        text = [NSString stringWithFormat:@"[*] Using offsets for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]];
+        if (off1->flags & FLAG_VERIFIED) {
+            text = [text stringByAppendingString:[NSString stringWithFormat:@"[*] Offsets verified for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
+        } else {
+            text = [text stringByAppendingString:[NSString stringWithFormat:@"[*] Offsets unverified, please inform if it functions\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
+        }
+    } else {
+        text = [NSString stringWithFormat:@"[*] Offsets not found for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]];
+        [jbButton setTitle:@"No offsets" forState:UIControlStateNormal];
+        [jbButton removeTarget:nil action:NULL forControlEvents:UIControlEventAllEvents];
+        [jbButton addTarget:self action:@selector(actionFailed) forControlEvents:UIControlEventTouchUpInside];
+    }
+
+    return [text stringByAppendingString:[NSString stringWithFormat:@"[*] Booted at %@\n", [[[NSISO8601DateFormatter alloc] init] stringFromDate:[NSDate dateWithTimeIntervalSince1970:bootsec()]]]];
 }
 
 - (void)loadView
@@ -60,68 +137,27 @@ uint32_t jailbreakFlags = 0;
     [super loadView];
 
     jbButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    jbButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [jbButton setTitle:@"Jailbreak" forState:UIControlStateNormal];
-    [jbButton setTitleColor:[UIColor colorWithRed:110.0 / 255.0 green:59.0 / 255.0 blue:38.0 / 255.0 alpha:1.0] forState:UIControlStateNormal];
-    [jbButton setTitleColor:[UIColor colorWithRed:35.0 / 255.0 green:75.0 / 255.0 blue:155.0 / 255.0 alpha:1.0] forState:UIControlStateHighlighted];
-    [jbButton setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
-    jbButton.titleLabel.font = [UIFont systemFontOfSize:30];
-    [jbButton addTarget:self action:@selector(actionJailbreak) forControlEvents:UIControlEventTouchUpInside];
+    addButton(jbButton, @"Jailbreak", UICOLOR(110, 59, 38, 1.0), UICOLOR(35, 75, 155, 1.0), 30, @selector(actionJailbreak), 1.0, 1.7);
 
 #ifdef __LP64__
     restoreButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [restoreButton setTitle:@"Restore RootFS" forState:UIControlStateNormal];
-    [restoreButton setTitleColor:[UIColor colorWithRed:110.0 / 255.0 green:59.0 / 255.0 blue:38.0 / 255.0 alpha:1.0] forState:UIControlStateNormal];
-    [restoreButton setTitleColor:[UIColor colorWithRed:35.0 / 255.0 green:75.0 / 255.0 blue:155.0 / 255.0 alpha:1.0] forState:UIControlStateHighlighted];
-    [restoreButton setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
-    restoreButton.titleLabel.font = [UIFont systemFontOfSize:30];
-    [restoreButton addTarget:self action:@selector(actionRootFS) forControlEvents:UIControlEventTouchUpInside];
+    addButton(restoreButton, @"Restore RootFS", UICOLOR(110, 59, 38, 1.0), UICOLOR(35, 75, 155, 1.0), 30, @selector(actionRootFS), 1.0, 1.5);
 #endif
 
     spiceLabel = [UILabel new];
-    spiceLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    spiceLabel.text = @"Spice";
-    spiceLabel.textColor = [UIColor colorWithRed:110.0 / 255.0 green:59.0 / 255.0 blue:38.0 / 255.0 alpha:1.0];
-    [spiceLabel setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
-    spiceLabel.font = [UIFont systemFontOfSize:24];
+    addLabel(spiceLabel, @"Spice", UICOLOR(110, 59, 38, 1.0), 24, 1.0, 0.4);
 
     titleLabel = [UILabel new];
-    titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    titleLabel.text = @"First untether-upgradable iOS 11 jailbreak";
-    [titleLabel setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
-    titleLabel.font = [UIFont systemFontOfSize:14];
+    addLabel(titleLabel, @"First untether-upgradable iOS 11 jailbreak", UICOLOR(0, 0, 0, 1.0), 14, 1.0, 0.5);
 
-    self.textView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.textView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.7];
-    self.textView.textColor = [UIColor whiteColor];
-    self.textView.text = [NSString stringWithFormat:@"[*] Compiled for %@ on %@\n", COMPILED_DEVICE, COMPILED_IOS];
+    addTextView(self.textView, [self getInitialLogText], [UIColor whiteColor], 12.0, CGRectMake(50, 150, 300, 150), self.view.center);
+}
 
-    self.textView.editable = NO;
-    self.textView.scrollEnabled = YES;
-    self.textView.textContainerInset = UIEdgeInsetsMake(0, 15, 15, 15);
-    self.textView.font = [UIFont fontWithName:@"Courier" size:12.0f];
-    self.textView.frame = CGRectMake(50, 150, 300, 150);
-    self.textView.center = self.view.center;
-    [self.view addSubview:self.textView];
+// Jailbreak stuff
 
-    [self.view addSubview:jbButton];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:jbButton attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:jbButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.7 constant:0.0]];
-
-#ifdef __LP64__
-    [self.view addSubview:restoreButton];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:restoreButton attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:restoreButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.5 constant:0.0]];
-#endif
-
-    [self.view addSubview:spiceLabel];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:spiceLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:spiceLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:0.4 constant:0.0]];
-
-    [self.view addSubview:titleLabel];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:titleLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:titleLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:0.5 constant:0.0]];
+- (void)actionFailed
+{
+    self.textView.text = [self.textView.text stringByAppendingString:[NSString stringWithFormat:@"[*] Please add offsets for %@ on %@\n", deviceName(), [[UIDevice currentDevice] systemVersion]]];
 }
 
 - (void)actionJailbreak
