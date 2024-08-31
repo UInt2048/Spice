@@ -91,7 +91,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         task_dyld_info_data_t info;
         mach_msg_type_number_t cnt = TASK_DYLD_INFO_COUNT;
         ASSERT_RET(out, "task_info", task_info(kernel_task, TASK_DYLD_INFO, (task_info_t)&info, &cnt));
-        kbase = info.all_image_info_addr;
+        kbase = (kptr_t)info.all_image_info_addr;
         PWN_LOG_KPTR("kbase", kbase);
     } else {
         // suspend_all_threads();
@@ -116,7 +116,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
     PWN_LOG("got kernel_task: %x\n", kernel_task);
 
-    kernproc = rk64(offs.data.kern_proc + kernel_slide);
+    kernproc = kread_kptr(offs.data.kern_proc + kernel_slide);
     VAL_CHECK(kernproc);
 
     PWN_LOG_KPTR("kernproc:", kernproc);
@@ -130,10 +130,10 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     kptr_t kexec_test = kexecute(offs.gadgets.add_x0_x0_ret, 1, 0x20);
     VAL_CHECK(kexec_test);
 
-    uint64_t myproc = find_proc(getpid());
+    kptr_t myproc = find_proc(getpid());
     VAL_CHECK(myproc);
 
-    uint64_t mytask = rk64(myproc + offs.struct_offsets.proc_task); // proc->task
+    kptr_t mytask = kread_kptr(myproc + offs.struct_offsets.proc_task); // proc->task
     VAL_CHECK(mytask);
 
     {
@@ -205,9 +205,9 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     {
         // set dyld task info for kernel
         // note: this offset is pretty much the t_flags offset +0x8
-        uint64_t kernel_task_addr = rk64(offs.data.kernel_task + kernel_slide);
-        wk64(kernel_task_addr + offs.struct_offsets.task_all_image_info_addr, kbase); // task->all_image_info_addr
-        wk64(kernel_task_addr + offs.struct_offsets.task_all_image_info_size, kernel_slide); // task->all_image_info_size
+        kptr_t kernel_task_addr = kread_kptr(offs.data.kernel_task + kernel_slide);
+        kwrite_kptr(kernel_task_addr + offs.struct_offsets.task_all_image_info_addr, kbase); // task->all_image_info_addr
+        kwrite_kptr(kernel_task_addr + offs.struct_offsets.task_all_image_info_size, kernel_slide); // task->all_image_info_size
 
         struct task_dyld_info dyld_info = { 0 };
         mach_msg_type_number_t count = TASK_DYLD_INFO_COUNT;
@@ -288,7 +288,6 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                 {
                     // modify springboard settings plist so cydia shows
-
                     if (access("/usr/bin/killall", F_OK) != 0) {
                         PWN_LOG("Failed to access /usr/bin/killall");
                         ret = KERN_FAILURE;
@@ -407,8 +406,8 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
         dict[@"AddRetGadget"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.gadgets.add_x0_x0_ret + kernel_slide];
         dict[@"KernProc"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.data.kern_proc + kernel_slide];
-        dict[@"OSBooleanTrue"] = [NSString stringWithFormat:FORMAT_KERNEL, rk64(rk64(offs.data.osboolean_true + kernel_slide))];
-        dict[@"OSBooleanFalse"] = [NSString stringWithFormat:FORMAT_KERNEL, rk64(rk64(offs.data.osboolean_true + sizeof(kptr_t) + kernel_slide))];
+        dict[@"OSBooleanTrue"] = [NSString stringWithFormat:FORMAT_KERNEL, kread_kptr(kread_kptr(offs.data.osboolean_true + kernel_slide))];
+        dict[@"OSBooleanFalse"] = [NSString stringWithFormat:FORMAT_KERNEL, kread_kptr(kread_kptr(offs.data.osboolean_true + sizeof(kptr_t) + kernel_slide))];
         dict[@"OSUnserializeXML"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.osunserializexml + kernel_slide];
         dict[@"ProcFind"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.proc_find + kernel_slide];
         dict[@"ProcRele"] = [NSString stringWithFormat:FORMAT_KERNEL, offs.funcs.proc_rele + kernel_slide];

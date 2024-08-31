@@ -4,7 +4,7 @@
 #include "common.h"
 #include "jailbreak.h"
 
-void kread(uint64_t kaddr, void* buffer, uint32_t length)
+void kread(kptr_t kaddr, void* buffer, uint32_t length)
 {
     mach_vm_size_t outsize = 0;
     kern_return_t err = mach_vm_read_overwrite(kernel_task,
@@ -23,7 +23,7 @@ void kread(uint64_t kaddr, void* buffer, uint32_t length)
     }
 }
 
-void kwrite(uint64_t kaddr, void* buffer, uint32_t length)
+void kwrite(kptr_t kaddr, void* buffer, uint32_t length)
 {
     kern_return_t err;
     err = mach_vm_write(kernel_task,
@@ -37,14 +37,14 @@ void kwrite(uint64_t kaddr, void* buffer, uint32_t length)
     }
 }
 
-uint32_t rk32(uint64_t kaddr)
+uint32_t rk32(kptr_t kaddr)
 {
     uint32_t val = 0x0;
     kread(kaddr, &val, sizeof(val));
     return val;
 }
 
-uint64_t rk64(uint64_t kaddr)
+uint64_t rk64(kptr_t kaddr)
 {
     uint64_t lower = rk32(kaddr);
     uint64_t higher = rk32(kaddr + 4);
@@ -52,17 +52,31 @@ uint64_t rk64(uint64_t kaddr)
     return full;
 }
 
-void wk32(uint64_t kaddr, uint32_t val)
+kptr_t kread_kptr(kptr_t kaddr)
+{
+#ifdef __LP64__
+    return rk64(kaddr);
+#else
+    return rk32(kaddr);
+#endif
+}
+
+void wk32(kptr_t kaddr, uint32_t val)
 {
     kwrite(kaddr, &val, sizeof(val));
 }
 
-void wk64(uint64_t kaddr, uint64_t val)
+void wk64(kptr_t kaddr, uint64_t val)
 {
     kwrite(kaddr, &val, sizeof(val));
 }
 
-uint64_t kalloc(uint64_t size)
+void kwrite_kptr(kptr_t kaddr, kptr_t val)
+{
+    kwrite(kaddr, &val, sizeof(val));
+}
+
+kptr_t kalloc(kptr_t size)
 {
     mach_vm_address_t addr = 0;
     mach_vm_size_t ksize = round_page_kernel(size);
@@ -76,7 +90,7 @@ uint64_t kalloc(uint64_t size)
     return addr;
 }
 
-void kfree(uint64_t addr, uint64_t size)
+void kfree(kptr_t addr, uint64_t size)
 {
     kern_return_t err = mach_vm_deallocate(kernel_task, addr, size);
 
@@ -85,7 +99,7 @@ void kfree(uint64_t addr, uint64_t size)
     }
 }
 
-void kprotect(uint64_t kaddr, uint32_t size, int prot)
+void kprotect(kptr_t kaddr, uint32_t size, int prot)
 {
     kern_return_t err = mach_vm_protect(kernel_task, (mach_vm_address_t)kaddr, (mach_vm_size_t)size, 0, (vm_prot_t)prot);
 

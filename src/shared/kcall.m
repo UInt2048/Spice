@@ -19,6 +19,12 @@ static kptr_t fake_client;
 static kmap_hdr_t zm_hdr;
 const int fake_kalloc_size = 0x1000;
 
+#ifdef __LP64__
+#define LOG_KPTR(...) LOG("%s %llx\n", __VA_ARGS__)
+#else
+#define LOG_KPTR(...) LOG("%s %x\n", __VA_ARGS__)
+#endif
+
 mach_port_t prepare_user_client()
 {
     kern_return_t ret = KERN_SUCCESS;
@@ -94,15 +100,15 @@ kern_return_t init_kexecute(kptr_t zone_map, kptr_t add_ret_gadget)
     // resolve zone map to set up zm_fix_addr
     kptr_t zone_map_addr = rk64(zone_map + kernel_slide);
     if (zone_map_addr == 0x0) {
-        LOG("wtf, failed to find zone map addr @ offset %llx", zone_map + kernel_slide);
+        LOG_KPTR("wtf, failed to find zone map addr @ offset", zone_map + kernel_slide);
         return KERN_FAILURE;
     }
 
     kread(zone_map_addr + 0x10, (void*)&zm_hdr, sizeof(zm_hdr));
 
-    LOG("zone map start: %llx\n", zm_hdr.start);
-    LOG("zone map end: %llx\n", zm_hdr.end);
-    LOG("zone map size: %llx\n", zm_hdr.end - zm_hdr.start);
+    LOG_KPTR("zone map start:", zm_hdr.start);
+    LOG_KPTR("zone map end:", zm_hdr.end);
+    LOG_KPTR("zone map size:", zm_hdr.end - zm_hdr.start);
 
     return KERN_SUCCESS;
 }
@@ -125,7 +131,11 @@ void term_kexecute()
 kptr_t kexecute(kptr_t addr, int n_args, ...)
 {
     if (fake_client == 0x0) {
+#ifdef __LP64__
         LOG("tried to kexecute on %llx with %d args when kexecute is not yet set up", addr, n_args);
+#else
+        LOG("tried to kexecute on %x with %d args when kexecute is not yet set up", addr, n_args);
+#endif
         return -1;
     }
 
