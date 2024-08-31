@@ -4,15 +4,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>
+
 #include "common.h"
 #include "stage1.h"
 #include "stage2.h"
 #include "uland_offsetfinder.h"
-#include "../shared/realsym.h"
-#include "../shared/offsets.h"
 #include "img.h"
 #include "patchfinder.h"
 #include "generated/install_stage3_offsets.h"
+
+#include <shared/offsets.h>
+#include <shared/realsym.h>
 
 // where all the implemented magic happens :P
 int install(const char *config_path, const char *racoon_path, const char *dyld_cache_path)

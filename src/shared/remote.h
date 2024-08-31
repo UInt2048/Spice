@@ -1,3 +1,6 @@
+#ifndef REMOTE_H
+#define REMOTE_H
+
 #include <stdio.h>
 #include <stdint.h>
 
@@ -29,3 +32,5 @@ uint64_t find_gadget_candidate(char **alternatives, size_t gadget_length);
 uint64_t find_blr_x19_gadget(void);
 uint64_t call_remote(mach_port_t task_port, void *fptr, int n_params, ...);
 int inject_library(pid_t pid, const char *path);
+
+#endif

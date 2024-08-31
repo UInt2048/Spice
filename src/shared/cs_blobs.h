@@ -1,6 +1,9 @@
 // credits @stek29 - https://github.com/stek29/electra/blob/amfid_fix/basebinaries/amfid_payload/
 // from: xnu osfmk/kern/cs_blobs.h
 
+#ifndef CS_BLOBS_H
+#define CS_BLOBS_H
+
 #define CS_VALID                    0x0000001    /* dynamically valid */
 #define CS_ADHOC                    0x0000002    /* ad hoc signed */
 #define CS_GET_TASK_ALLOW           0x0000004    /* has get-task-allow entitlement */
@@ -161,3 +164,5 @@ static const uint32_t hashPriorities[] = {
     CS_HASHTYPE_SHA256,
     CS_HASHTYPE_SHA384,
 };
+
+#endif

@@ -14,7 +14,6 @@
 #include <errno.h>
 
 #include "kmem.h"
-#include "cs_blobs.h"
 #include "codesign.h"
 #include "jailbreak.h"
 
