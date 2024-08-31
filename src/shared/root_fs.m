@@ -14,6 +14,7 @@
 #include "kutils.h"
 #include "jailbreak.h"
 #include "kents.h"
+#include "utils.h"
 
 // Kernel.framework -> hfs/hfs_mount.h
 struct hfs_mount_args {
@@ -34,6 +35,8 @@ typedef struct val_attrs {
     attribute_set_t   returned;
     attrreference_t   name_info;
 } val_attrs_t;
+
+#define RB_QUICK 0x400 // quick and ungraceful reboot with file system caches flushed
 
 // creds https://github.com/sbingner/snappy/blob/master/snappy.m#L90
 int snapshot_count(const char *path)
@@ -327,7 +330,11 @@ kern_return_t remount_root_fs()
         
         // note to self: 0x400 causes hard reboot w/o flushin any fs shit
         // without this, snapshot rename won't come into place
-        reboot(0x400);
+        if (reboot(RB_QUICK) != 0) {
+            if (reboot(0) != 0) {
+                abort();
+            }
+        }
 
         return KERN_SUCCESS;
     }

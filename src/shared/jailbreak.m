@@ -15,6 +15,7 @@
 #include "kcall.h"
 #include "cs_blobs.h"
 #include "kutils.h"
+#include "restore_fs.h"
 #include "root_fs.h"
 #include "nonce.h"
 #include "codesign.h"
@@ -214,6 +215,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
     MACH(remount_root_fs());
     PWN_LOG("remounted root fs");
+    
+    if (opt & JBOPT_RESTORE_ROOT_FS) {
+        ret = restore_root_fs(controller);
+        goto out;
+    }
 
     updateStage(16);
     

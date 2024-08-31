@@ -110,7 +110,7 @@ int execprog(const char *prog, const char* args[]) {
         return rv;
     }
     
-    pid_t pd;
+    pid_t pd = 0;
     if ((rv = posix_spawn(&pd, prog, &child_fd_actions, NULL, (char**)args, NULL))) {
         printf("posix_spawn error: %d (%s)\n", rv, strerror(rv));
         return rv;

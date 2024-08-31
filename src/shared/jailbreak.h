@@ -6,7 +6,8 @@
 
 #include "common.h"
 
-#define JBOPT_POST_ONLY         (1 << 0) /* post-exploitation only */
+#define JBOPT_POST_ONLY (1 << 0) /* post-exploitation only */
+#define JBOPT_RESTORE_ROOT_FS (1 << 1) /* restore root file system snapshot */
 
 extern offsets_t offs;
 

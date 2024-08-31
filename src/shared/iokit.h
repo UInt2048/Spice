@@ -107,4 +107,5 @@ kern_return_t IOConnectCallAsyncScalarMethod(io_connect_t client, uint32_t selec
 kern_return_t IOConnectCallAsyncStructMethod(io_connect_t client, uint32_t selector, mach_port_t wake_port, uint64_t *ref, uint32_t refCnt, const void *inStruct, size_t inStructCnt, void *outStruct, size_t *outStructCnt);
 kern_return_t IOConnectTrap6(io_connect_t client, uint32_t index, uintptr_t a, uintptr_t b, uintptr_t c, uintptr_t d, uintptr_t e, uintptr_t f);
 
+io_registry_entry_t IORegistryEntryFromPath(mach_port_t mainPort, const io_string_t path);
 #endif
