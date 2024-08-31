@@ -1,13 +1,14 @@
 #include <shared/jailbreak.h>
-#include <shared/utils.h>
 #include <shared/sbx.h>
+#include <shared/utils.h>
 
 #import <CoreFoundation/CoreFoundation.h>
 
 #import "MainVC.h"
 
-void sendLog(void* controller, NSString* log) {
-	[(MainVC*)controller showLog:log];
+void sendLog(void* controller, NSString* log)
+{
+    [(MainVC*)controller showLog:log];
 }
 
 @implementation MainVC
@@ -17,9 +18,9 @@ UILabel *spiceLabel, *titleLabel;
 bool hasJailbroken = false;
 uint32_t jailbreakFlags = 0;
 
--(void)showLog:(NSString *)log
+- (void)showLog:(NSString*)log
 {
-	NSLog(@"Entered MainVC log function to log: \"%@\"", log);
+    NSLog(@"Entered MainVC log function to log: \"%@\"", log);
     if (![NSThread isMainThread]) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [self showLog:log];
@@ -40,69 +41,69 @@ uint32_t jailbreakFlags = 0;
 
     id ret = [super initWithNibName:nil bundle:nil];
     self.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Jailbreak" image:nil tag:1];
-    self.textView = [[UITextView alloc] init];	
+    self.textView = [[UITextView alloc] init];
     return ret;
 }
 
 - (void)viewWillAppear:(BOOL)animated
 {
-	[super viewWillAppear:animated];
-    CAGradientLayer *gradient = [CAGradientLayer layer];
-	gradient.frame = self.view.bounds;
-	gradient.colors = @[(id)[UIColor colorWithRed:92.0/255.0 green:201.0/255.0 blue:59.0/255.0 alpha:1.0].CGColor,
-		(id)[UIColor colorWithRed:42.0/255.0 green:100.0/255.0 blue:25.0/255.0 alpha:1.0].CGColor];
-	[self.view.layer insertSublayer:gradient atIndex:0];
+    [super viewWillAppear:animated];
+    CAGradientLayer* gradient = [CAGradientLayer layer];
+    gradient.frame = self.view.bounds;
+    gradient.colors = @[ (id)[UIColor colorWithRed:92.0 / 255.0 green:201.0 / 255.0 blue:59.0 / 255.0 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:42.0 / 255.0 green:100.0 / 255.0 blue:25.0 / 255.0 alpha:1.0].CGColor ];
+    [self.view.layer insertSublayer:gradient atIndex:0];
 }
 
 - (void)loadView
 {
     [super loadView];
-    
+
     jbButton = [UIButton buttonWithType:UIButtonTypeSystem];
     jbButton.translatesAutoresizingMaskIntoConstraints = NO;
     [jbButton setTitle:@"Jailbreak" forState:UIControlStateNormal];
-    [jbButton setTitleColor:[UIColor colorWithRed:110.0/255.0 green:59.0/255.0 blue:38.0/255.0 alpha:1.0] forState:UIControlStateNormal];
-    [jbButton setTitleColor:[UIColor colorWithRed:35.0/255.0 green:75.0/255.0 blue:155.0/255.0 alpha:1.0] forState:UIControlStateHighlighted];
+    [jbButton setTitleColor:[UIColor colorWithRed:110.0 / 255.0 green:59.0 / 255.0 blue:38.0 / 255.0 alpha:1.0] forState:UIControlStateNormal];
+    [jbButton setTitleColor:[UIColor colorWithRed:35.0 / 255.0 green:75.0 / 255.0 blue:155.0 / 255.0 alpha:1.0] forState:UIControlStateHighlighted];
     [jbButton setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
     jbButton.titleLabel.font = [UIFont systemFontOfSize:30];
     [jbButton addTarget:self action:@selector(actionJailbreak) forControlEvents:UIControlEventTouchUpInside];
-   
-#ifdef __LP64__ 
+
+#ifdef __LP64__
     restoreButton = [UIButton buttonWithType:UIButtonTypeSystem];
     restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
     [restoreButton setTitle:@"Restore RootFS" forState:UIControlStateNormal];
-    [restoreButton setTitleColor:[UIColor colorWithRed:110.0/255.0 green:59.0/255.0 blue:38.0/255.0 alpha:1.0] forState:UIControlStateNormal];
-    [restoreButton setTitleColor:[UIColor colorWithRed:35.0/255.0 green:75.0/255.0 blue:155.0/255.0 alpha:1.0] forState:UIControlStateHighlighted];
+    [restoreButton setTitleColor:[UIColor colorWithRed:110.0 / 255.0 green:59.0 / 255.0 blue:38.0 / 255.0 alpha:1.0] forState:UIControlStateNormal];
+    [restoreButton setTitleColor:[UIColor colorWithRed:35.0 / 255.0 green:75.0 / 255.0 blue:155.0 / 255.0 alpha:1.0] forState:UIControlStateHighlighted];
     [restoreButton setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
     restoreButton.titleLabel.font = [UIFont systemFontOfSize:30];
     [restoreButton addTarget:self action:@selector(actionRootFS) forControlEvents:UIControlEventTouchUpInside];
 #endif
-    
+
     spiceLabel = [UILabel new];
     spiceLabel.translatesAutoresizingMaskIntoConstraints = NO;
     spiceLabel.text = @"Spice";
-    spiceLabel.textColor = [UIColor colorWithRed:110.0/255.0 green:59.0/255.0 blue:38.0/255.0 alpha:1.0];
+    spiceLabel.textColor = [UIColor colorWithRed:110.0 / 255.0 green:59.0 / 255.0 blue:38.0 / 255.0 alpha:1.0];
     [spiceLabel setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
     spiceLabel.font = [UIFont systemFontOfSize:24];
-    
+
     titleLabel = [UILabel new];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     titleLabel.text = @"First untether-upgradable iOS 11 jailbreak";
     [titleLabel setBackgroundColor:[UIColor colorWithRed:1.00 green:0.00 blue:0.00 alpha:0.0]];
     titleLabel.font = [UIFont systemFontOfSize:14];
-    
-    self.textView.translatesAutoresizingMaskIntoConstraints = NO;
-	self.textView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.7];
-	self.textView.textColor = [UIColor whiteColor];
-	self.textView.text = [NSString stringWithFormat:@"[*] Compiled for %@ on %@\n", COMPILED_DEVICE, COMPILED_IOS];
 
-	self.textView.editable = NO;
-	self.textView.scrollEnabled = YES;
-	self.textView.textContainerInset = UIEdgeInsetsMake(0, 15, 15, 15);
-	self.textView.font = [UIFont fontWithName:@"Courier" size:12.0f];
-	self.textView.frame = CGRectMake(50, 150, 300, 150);
-	self.textView.center = self.view.center;
-	[self.view addSubview:self.textView];
+    self.textView.translatesAutoresizingMaskIntoConstraints = NO;
+    self.textView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.7];
+    self.textView.textColor = [UIColor whiteColor];
+    self.textView.text = [NSString stringWithFormat:@"[*] Compiled for %@ on %@\n", COMPILED_DEVICE, COMPILED_IOS];
+
+    self.textView.editable = NO;
+    self.textView.scrollEnabled = YES;
+    self.textView.textContainerInset = UIEdgeInsetsMake(0, 15, 15, 15);
+    self.textView.font = [UIFont fontWithName:@"Courier" size:12.0f];
+    self.textView.frame = CGRectMake(50, 150, 300, 150);
+    self.textView.center = self.view.center;
+    [self.view addSubview:self.textView];
 
     [self.view addSubview:jbButton];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:jbButton attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
@@ -117,7 +118,7 @@ uint32_t jailbreakFlags = 0;
     [self.view addSubview:spiceLabel];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:spiceLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:spiceLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:0.4 constant:0.0]];
-    
+
     [self.view addSubview:titleLabel];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:titleLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
     [self.view addConstraint:[NSLayoutConstraint constraintWithItem:titleLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:0.5 constant:0.0]];
@@ -137,15 +138,14 @@ uint32_t jailbreakFlags = 0;
 
 - (void)actionJailbreakInternal
 {
-    if (hasJailbroken)
-    {
+    if (hasJailbroken) {
         respring();
         return;
     }
 
-	jbButton.selected = NO;
-	jbButton.highlighted = NO;
-	jbButton.enabled = YES;
+    jbButton.selected = NO;
+    jbButton.highlighted = NO;
+    jbButton.enabled = YES;
     [jbButton setTitle:@"Jailbreaking..." forState:UIControlStateNormal];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(void) {
@@ -154,14 +154,14 @@ uint32_t jailbreakFlags = 0;
 
         if (ret != 0) {
             NSLog(@"jailbreak failed");
-            
+
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self exploitFailed];
             });
-            
+
             return;
         }
-        
+
         dispatch_async(dispatch_get_main_queue(), ^{
             [self exploitSucceeded];
         });
@@ -170,9 +170,9 @@ uint32_t jailbreakFlags = 0;
 
 - (void)exploitSucceeded
 {
-	jbButton.selected = NO;
-	jbButton.highlighted = NO;
-	jbButton.enabled = YES;
+    jbButton.selected = NO;
+    jbButton.highlighted = NO;
+    jbButton.enabled = YES;
     hasJailbroken = true;
 
     [jbButton setTitle:@"Respring" forState:UIControlStateNormal];
@@ -180,11 +180,11 @@ uint32_t jailbreakFlags = 0;
 
 - (void)exploitFailed
 {
-	jbButton.selected = NO;
-	jbButton.highlighted = NO;
-	jbButton.enabled = YES;
+    jbButton.selected = NO;
+    jbButton.highlighted = NO;
+    jbButton.enabled = YES;
 
-	[jbButton setTitle:@"Failed, try again?" forState:UIControlStateNormal];
+    [jbButton setTitle:@"Failed, try again?" forState:UIControlStateNormal];
 }
 
 @end

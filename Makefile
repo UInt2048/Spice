@@ -3,7 +3,7 @@ SHELL            = /bin/bash
 TARGET_GUI       = Spice
 TARGET_CLI       = spice
 PACKAGE          = lol.spyware.spicy
-VERSION          = 1.0.168
+VERSION          = 1.0.169
 
 BIN              = bin
 RES              = res
@@ -16,6 +16,7 @@ JAKE             = submodules/libjake
 PAYLOAD          = $(SRC_CLI)/generated/lol.spyware.spiceuntether_$(VERSION)_iphoneos-arm.deb
 NO_UNTETHER     := $(SRC_CLI)/stage3.m $(SRC_CLI)/stage4.m $(SRC_CLI)/generator.m # These are only pre-dependencies
 UNTETHER_SRC    := $(filter-out $(NO_UNTETHER),$(wildcard $(SRC_CLI)/*.m))
+FORMAT_SRC      := $(filter-out $(SRC_ALL)/offsets.m,$(wildcard $(SRC_ALL)/*.h $(SRC_ALL)/*.m $(SRC_CLI)/*.h $(SRC_CLI)/*.m $(SRC_CLI)/*.c $(SRC_GUI)/*.h $(SRC_GUI)/*.m))
 
 SDK_RESULT       = xcrun -sdk iphoneos11.4
 ARCH_RESULT      = arm64
@@ -165,6 +166,8 @@ clean:
 	rm -rf $(SRC_CLI)/generated/*
 	rm -f *.ipa *.dylib $(TRAMP)
 	$(MAKE) $(AM_MAKEFLAGS) -C $(JAKE) clean CC='$(IGCC) $(ARCH_CLI)'
+	clang-format -i -style="{BasedOnStyle: WebKit, InsertNewlineAtEOF: true, UseTab: Never}" $(FORMAT_SRC)
+	clang-format -i -style="{BasedOnStyle: WebKit, InsertNewlineAtEOF: true, UseTab: Never, AlignConsecutiveAssignments: AcrossEmptyLinesAndComments}" $(SRC_ALL)/offsets.m
 
 ifndef ID
 install:

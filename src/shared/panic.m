@@ -4,9 +4,9 @@
 
 #include "panic.h"
 
-static void get_matching_services_ool(mach_port_t master_port, void *matching, mach_msg_type_number_t matchingCnt)
+static void get_matching_services_ool(mach_port_t master_port, void* matching, mach_msg_type_number_t matchingCnt)
 {
-#ifdef  __MigPackStructs
+#ifdef __MigPackStructs
 #pragma pack(4)
 #endif
     typedef struct {
@@ -35,12 +35,12 @@ static void get_matching_services_ool(mach_port_t master_port, void *matching, m
         Reply Out;
     } Mess;
 
-    Request *InP = &Mess.In;
+    Request* InP = &Mess.In;
 
     InP->msgh_body.msgh_descriptor_count = 1;
-    InP->matching.address = (void *)(matching);
+    InP->matching.address = (void*)(matching);
     InP->matching.size = matchingCnt;
-    InP->matching.deallocate =  FALSE;
+    InP->matching.deallocate = FALSE;
     InP->matching.copy = MACH_MSG_PHYSICAL_COPY;
     InP->matching.type = MACH_MSG_OOL_DESCRIPTOR;
     InP->NDR = NDR_record;
@@ -51,17 +51,15 @@ static void get_matching_services_ool(mach_port_t master_port, void *matching, m
     InP->Head.msgh_id = 2857;
     InP->Head.msgh_reserved = 0;
 
-    mach_msg(&InP->Head, MACH_SEND_MSG|MACH_RCV_MSG|MACH_MSG_OPTION_NONE, (mach_msg_size_t)sizeof(Request), (mach_msg_size_t)sizeof(Reply), InP->Head.msgh_local_port, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+    mach_msg(&InP->Head, MACH_SEND_MSG | MACH_RCV_MSG | MACH_MSG_OPTION_NONE, (mach_msg_size_t)sizeof(Request), (mach_msg_size_t)sizeof(Reply), InP->Head.msgh_local_port, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
 }
 
 __attribute__((noreturn)) void do_panic(void)
 {
     mach_port_t master = MACH_PORT_NULL;
     host_get_io_master(mach_host_self(), &master);
-    while(1)
-    {
-        uint32_t payload[] =
-        {
+    while (1) {
+        uint32_t payload[] = {
             kOSSerializeMagic,
             kOSSerializeEndCollection | kOSSerializeArray | 0x400,
             kOSSerializeEndCollection | kOSSerializeObject | 0,

@@ -1,60 +1,58 @@
 #include <dlfcn.h>
+#include <mach/mach.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/stat.h>
-#include <mach/mach.h>
 
 #include <archive.h>
 
+#include "ArchiveFile.h"
+#include "codesign.h"
 #include "common.h"
 #include "infoleak.h"
-#include "pwn.h"
-#include "utils.h"
-#include "kmem.h"
-#include "root.h"
 #include "kcall.h"
+#include "kmem.h"
 #include "kutils.h"
-#include "restore_fs.h"
-#include "root_fs.h"
 #include "nonce.h"
-#include "codesign.h"
+#include "pwn.h"
 #include "remote.h"
-#include "ArchiveFile.h"
+#include "restore_fs.h"
+#include "root.h"
+#include "root_fs.h"
+#include "utils.h"
 
 #include "jailbreak.h"
 #include "offsets.h"
 
-#define MACH(func)\
-    ret = func;\
-    if (ret != KERN_SUCCESS)\
-    {\
-        PWN_LOG(#func " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret));\
-        goto out;\
+#define MACH(func)                                                                        \
+    ret = func;                                                                           \
+    if (ret != KERN_SUCCESS) {                                                            \
+        PWN_LOG(#func " (ln.%d) failed: %x (%s)", __LINE__, ret, mach_error_string(ret)); \
+        goto out;                                                                         \
     }
 
-#define VAL_CHECK(value)\
-    if ((value) == 0x0)\
-    {\
-        PWN_LOG("(ln.%d)failed to find " #value "!", __LINE__);\
-        ret = KERN_FAILURE;\
-        goto out;\
+#define VAL_CHECK(value)                                        \
+    if ((value) == 0x0) {                                       \
+        PWN_LOG("(ln.%d)failed to find " #value "!", __LINE__); \
+        ret = KERN_FAILURE;                                     \
+        goto out;                                               \
     }
 
-offsets_t offs = (offsets_t){
+offsets_t offs = (offsets_t) {
     .constant = {
         .kernel_image_base = OFF_KERNEL_IMAGE_BASE, // static
     },
     .funcs = {
         .copyin = OFF_COPYIN, // symbol
-        .copyout = OFF_COPYOUT, // symbol 
+        .copyout = OFF_COPYOUT, // symbol
         .current_task = OFF_CURRENT_TASK, // symbol
-        .get_bsdtask_info = OFF_GET_BSDTASK_INFO, // symbol 
+        .get_bsdtask_info = OFF_GET_BSDTASK_INFO, // symbol
         .vm_map_wire_external = OFF_VM_MAP_WIRE_EXTERNAL, // symbol
         .vfs_context_current = OFF_VFS_CONTEXT_CURRENT, // symbol
         .vnode_lookup = OFF_VNODE_LOOKUP, // symbol
         .osunserializexml = OFF_OSUNSERIALIZEXML, // symbol (__Z16OSUnserializeXMLPKcPP8OSString)
         .proc_find = OFF_PROC_FIND, // symbol
-        .proc_rele = OFF_PROC_RELE, // symbol 
+        .proc_rele = OFF_PROC_RELE, // symbol
         .smalloc = OFF_SMALLOC, // found by searching for "sandbox memory allocation failure"
         .ipc_port_alloc_special = OFF_IPC_PORT_ALLOC_SPECIAL, // \"ipc_processor_init\" in processor_start -> call above
         .ipc_kobject_set = OFF_IPC_KOBJECT_SET, // above _mach_msg_send_from_kernel_proper (2nd above for 10.3.4)
@@ -64,11 +62,11 @@ offsets_t offs = (offsets_t){
         .add_x0_x0_ret = OFF_ADD_X0_X0_RET, // gadget (or _csblob_get_cdhash)
     },
     .data = {
-        .kernel_task = OFF_KERNEL_TASK, // symbol 
+        .kernel_task = OFF_KERNEL_TASK, // symbol
         .kern_proc = OFF_KERN_PROC, // symbol (kernproc)
-        .rootvnode = OFF_ROOTVNODE, // symbol 
+        .rootvnode = OFF_ROOTVNODE, // symbol
         .realhost = OFF_REALHOST, // _host_priv_self -> adrp addr
-        .zone_map = OFF_ZONE_MAP, // str 'zone_init: kmem_suballoc failed', first qword above 
+        .zone_map = OFF_ZONE_MAP, // str 'zone_init: kmem_suballoc failed', first qword above
         .osboolean_true = OFF_OSBOOLEAN_TRUE, // OSBoolean::withBoolean -> first adrp addr (isn't used anywhere tho)
         .trust_cache = OFF_TRUST_CACHE, // (on iOS 10.3.4, use "%s: trust cache already loaded with matching UUID, ignoring\n", store below call to _lck_mtx_lock in same function) "%s: trust cache loaded successfully.\n" store above
     },
@@ -85,7 +83,7 @@ offsets_t offs = (offsets_t){
         .proc_p_csflags = OFF_PROC_P_CSFLAGS, // proc->p_csflags (_cs_restricted, first ldr offset)
         .task_t_flags = OFF_TASK_T_FLAGS, // task->t_flags (IOUserClient::clientHasPrivilege, function call after current_task)
         .task_all_image_info_addr = OFF_TASK_ALL_IMAGE_INFO_ADDR, // ("created task is not a member of a resource coalition", search 0x5f) task->all_image_info_addr (theoretically just +0x8 from t_flags)
-        .task_all_image_info_size = OFF_TASK_ALL_IMAGE_INFO_SIZE,  // ("created task is not a member of a resource coalition", search 0x5f) task->all_image_info_size
+        .task_all_image_info_size = OFF_TASK_ALL_IMAGE_INFO_SIZE, // ("created task is not a member of a resource coalition", search 0x5f) task->all_image_info_size
     },
     .iosurface = {
         .create_outsize = OFF_CREATE_OUTSIZE, // TODO: prove this
@@ -98,9 +96,9 @@ task_t kernel_task;
 kptr_t kernel_slide;
 kptr_t kernproc;
 
-#include <time.h>
 #include <errno.h>
 #include <sys/sysctl.h>
+#include <time.h>
 
 // Shamelessly stolen from https://stackoverflow.com/a/11676260/
 time_t bootsec()
@@ -108,8 +106,7 @@ time_t bootsec()
     struct timeval boottime;
     size_t len = sizeof(boottime);
     int mib[2] = { CTL_KERN, KERN_BOOTTIME };
-    if( sysctl(mib, 2, &boottime, &len, NULL, 0) < 0 )
-    {
+    if (sysctl(mib, 2, &boottime, &len, NULL, 0) < 0) {
         return -1.0;
     }
     return boottime.tv_sec;
@@ -136,8 +133,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 #endif
 #define updateStage(stage) PWN_LOG("Jailbreaking... (%d/21)", stage)
 
-    if(opt & JBOPT_POST_ONLY)
-    {
+    if (opt & JBOPT_POST_ONLY) {
         ret = host_get_special_port(mach_host_self(), HOST_LOCAL_NODE, 4, &kernel_task);
         ASSERT_RET_PORT(out, "kernel_task", ret, kernel_task);
         task_dyld_info_data_t info;
@@ -150,9 +146,10 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
         ret = pwn_kernel(offs, &kernel_task, &kbase, controller, sendLog);
 
-        //resume_all_threads();
-            
-        if(ret != KERN_SUCCESS) goto out;
+        // resume_all_threads();
+
+        if (ret != KERN_SUCCESS)
+            goto out;
 
         PWN_LOG("kernel been dun fucked");
     }
@@ -160,8 +157,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     kernel_slide = kbase - offs.constant.kernel_image_base;
     PWN_LOG_KPTR("kslide", kernel_slide);
 
-    if (!MACH_PORT_VALID(kernel_task))
-    {
+    if (!MACH_PORT_VALID(kernel_task)) {
         PWN_LOG("invalid kernel task");
         goto out;
     }
@@ -201,7 +197,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
     {
         // patch t_flags
-        // bypasses task_conversion_eval checks 
+        // bypasses task_conversion_eval checks
         uint32_t t_flags = rk32(mytask + offs.struct_offsets.task_t_flags); // task->t_flags
         VAL_CHECK(t_flags);
 
@@ -214,14 +210,14 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
     MACH(remount_root_fs());
     PWN_LOG("remounted root fs");
-    
+
     if (opt & JBOPT_RESTORE_ROOT_FS) {
         ret = restore_root_fs(controller);
         goto out;
     }
 
     updateStage(16);
-    
+
     // make sure this only gets run once per boot
     const char* doublebootcheck = [[NSString stringWithFormat:@"/tmp/spice.%lu", (unsigned long)bootsec()] UTF8String];
     if (access(doublebootcheck, F_OK) == 0) {
@@ -242,43 +238,39 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         // set generator
         MACH(set_generator("0x1111111111111111"));
 
-        const char *current_gen = get_generator();
+        const char* current_gen = get_generator();
         PWN_LOG("generator is set to: %s", current_gen);
-        
-        if (current_gen)
-        {
-            free((void *)current_gen);
+
+        if (current_gen) {
+            free((void*)current_gen);
         }
 
         // do we want to lock it down again?
         // leaving it unlocked allows ppl to set nonce from shell...
-        // MACH(lock_nvram()); 
+        // MACH(lock_nvram());
     }
-    
+
     {
         // set dyld task info for kernel
         // note: this offset is pretty much the t_flags offset +0x8
         uint64_t kernel_task_addr = rk64(offs.data.kernel_task + kernel_slide);
-        wk64(kernel_task_addr + offs.struct_offsets.task_all_image_info_addr, kbase);  // task->all_image_info_addr
+        wk64(kernel_task_addr + offs.struct_offsets.task_all_image_info_addr, kbase); // task->all_image_info_addr
         wk64(kernel_task_addr + offs.struct_offsets.task_all_image_info_size, kernel_slide); // task->all_image_info_size
-    
-        struct task_dyld_info dyld_info = {0};
+
+        struct task_dyld_info dyld_info = { 0 };
         mach_msg_type_number_t count = TASK_DYLD_INFO_COUNT;
         ret = task_info(kernel_task, TASK_DYLD_INFO, (task_info_t)&dyld_info, &count);
         PWN_LOG("task_info ret: %x (%s)", ret, mach_error_string(ret));
-        
-        if (ret == KERN_SUCCESS)
-        {
+
+        if (ret == KERN_SUCCESS) {
             PWN_LOG("all_image_info_addr: %llx", dyld_info.all_image_info_addr);
             PWN_LOG("all_image_info_size: %llx", dyld_info.all_image_info_size);
-            
-            if (dyld_info.all_image_info_addr != kbase)
-            {
+
+            if (dyld_info.all_image_info_addr != kbase) {
                 PWN_LOG("failed to set all_image_info_addr godammit");
             }
-            
-            if (dyld_info.all_image_info_size != kernel_slide)
-            {
+
+            if (dyld_info.all_image_info_size != kernel_slide) {
                 PWN_LOG("failed to set all_image_info_size godammit");
             }
         }
@@ -288,8 +280,8 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     CFBundleRef mainBundle = CFBundleGetMainBundle();
     CFURLRef resourcesUrl = CFBundleCopyResourcesDirectoryURL(mainBundle);
     int len = 4096;
-    char *bundle_path = malloc(len);
-    CFURLGetFileSystemRepresentation(resourcesUrl, TRUE, (UInt8 *)bundle_path, len);
+    char* bundle_path = malloc(len);
+    CFURLGetFileSystemRepresentation(resourcesUrl, TRUE, (UInt8*)bundle_path, len);
     PWN_LOG("bundle path: %s", bundle_path);
 
     updateStage(17);
@@ -324,8 +316,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     if (access("/jb", F_OK) != 0) {
         MACH(mkdir("/jb", 0755));
 
-        if (access("/jb", F_OK) != 0)
-        {
+        if (access("/jb", F_OK) != 0) {
             PWN_LOG("failed to create /jb directory!");
             ret = KERN_FAILURE;
             goto out;
@@ -333,10 +324,8 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     }
 
     {
-        if ((opt & JBOPT_POST_ONLY) == 0)
-        {
-            if (access("/.spice_bootstrap_installed", F_OK) != 0)
-            {
+        if ((opt & JBOPT_POST_ONLY) == 0) {
+            if (access("/.spice_bootstrap_installed", F_OK) != 0) {
                 EXTRACT_RESOURCE("bootstrap.tar.lzma", "/jb/bootstrap.tar.lzma", extractArchive);
 
                 EXTRACT_RESOURCE("jailbreak-resources.deb", "/jb/jailbreak-resources.deb", extractDeb);
@@ -364,15 +353,8 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                         MACH(inject_trust("/bin/kill"));
                     }
 
-                    ret = execprog("/usr/bin/killall", (const char **)&(const char *[])
-                    {
-                        "/usr/bin/killall",
-                        "-SIGSTOP",
-                        "cfprefsd",
-                        NULL
-                    });
-                    if (ret != 0)
-                    {
+                    ret = execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "-SIGSTOP", "cfprefsd", NULL });
+                    if (ret != 0) {
                         if (ret == EBADEXEC) /* 85 */ {
                             PWN_LOG("/usr/bin/killall rejected by amfid");
                         } else {
@@ -385,16 +367,9 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     NSMutableDictionary* md = [[NSMutableDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"];
                     [md setObject:[NSNumber numberWithBool:YES] forKey:@"SBShowNonDefaultSystemApps"];
                     [md writeToFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist" atomically:YES];
-                    
-                    ret = execprog("/usr/bin/killall", (const char **)&(const char *[])
-                    {
-                        "/usr/bin/killall",
-                        "-SIGSTOP",
-                        "cfprefsd",
-                        NULL
-                    });
-                    if (ret != KERN_SUCCESS)
-                    {
+
+                    ret = execprog("/usr/bin/killall", (const char**)&(const char*[]) { "/usr/bin/killall", "-SIGSTOP", "cfprefsd", NULL });
+                    if (ret != KERN_SUCCESS) {
                         PWN_LOG("failed to run killall(2): %s", strerror(ret));
                         ret = KERN_FAILURE;
                         goto out;
@@ -405,12 +380,11 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
                 {
                     PWN_LOG("running uicache (this will take some time)...");
-                    
+
                     MACH(inject_trust("/usr/bin/uicache"));
 
                     ret = execprog("/usr/bin/uicache", NULL);
-                    if (ret != 0)
-                    {
+                    if (ret != 0) {
                         PWN_LOG("failed to run uicache!");
                         ret = KERN_FAILURE;
                         goto out;
@@ -419,24 +393,18 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
                     PWN_LOG("done!");
                 }
             }
-        }
-        else if (access("/.spice_bootstrap_installed", F_OK) != 0)
-        {
-            PWN_LOG("big problem! we are in JBOPT_POST_ONLY mode but the bootstrap was not found!");   
+        } else if (access("/.spice_bootstrap_installed", F_OK) != 0) {
+            PWN_LOG("big problem! we are in JBOPT_POST_ONLY mode but the bootstrap was not found!");
             return KERN_FAILURE;
-        }
-        else 
-        {
+        } else {
             PWN_LOG("JBOPT_POST_ONLY mode and bootstrap is present, all is well");
         }
     }
 
     {
-        // check if substrate is not installed & install it from a deb file 
-        if ((opt & JBOPT_POST_ONLY) == 0)
-        {
-            if (access("/usr/libexec/substrate", F_OK) != 0)
-            {
+        // check if substrate is not installed & install it from a deb file
+        if ((opt & JBOPT_POST_ONLY) == 0) {
+            if (access("/usr/libexec/substrate", F_OK) != 0) {
                 PWN_LOG("substrate was not found? installing it...");
 
                 EXTRACT_RESOURCE("mobilesubstrate.deb", "/jb/mobilesubstrate.deb", extractDeb);
@@ -449,34 +417,26 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     updateStage(18);
 
     {
-        // handle substrate's unrestrict library 
+        // handle substrate's unrestrict library
 
-        if (access("/Library/MobileSubstrate", F_OK) != 0)
-        {
+        if (access("/Library/MobileSubstrate", F_OK) != 0) {
             mkdir("/Library/MobileSubstrate", 0755);
         }
-        if (access("/Lbirary/MobileSubstrate/ServerPlugins", F_OK) != 0)
-        {
+        if (access("/Lbirary/MobileSubstrate/ServerPlugins", F_OK) != 0) {
             mkdir("/Library/MobileSubstrate/ServerPlugins", 0755);
         }
 
-        if ((opt & JBOPT_POST_ONLY) == 0)
-        {
-            if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) == 0)
-            {
+        if ((opt & JBOPT_POST_ONLY) == 0) {
+            if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) == 0) {
                 unlink("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
                 PWN_LOG("deleted old Unrestrict.dylib");
             }
 
             COPY_RESOURCE("Unrestrict.dylib", "/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib");
             PWN_LOG("unrestrict: %d", access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK));
-        }
-        else if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) != 0)
-        {
+        } else if (access("/Library/MobileSubstrate/ServerPlugins/Unrestrict.dylib", F_OK) != 0) {
             PWN_LOG("note: JBOPT_POST_ONLY mode but unrestrict.dylib was not found");
-        }
-        else
-        {
+        } else {
             PWN_LOG("JBOPT_POST_ONLY mode and unrestrict is present, all is well");
         }
     }
@@ -484,15 +444,12 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     updateStage(19);
 
     {
-        NSMutableDictionary *dict = NULL;
+        NSMutableDictionary* dict = NULL;
 
-        NSData *blob = [NSData dataWithContentsOfFile:@"/jb/offsets.plist"];
-        if (blob != NULL)
-        {
+        NSData* blob = [NSData dataWithContentsOfFile:@"/jb/offsets.plist"];
+        if (blob != NULL) {
             dict = [NSPropertyListSerialization propertyListWithData:blob options:NSPropertyListMutableContainers format:nil error:nil];
-        }
-        else 
-        {
+        } else {
             dict = [[NSMutableDictionary alloc] init];
         }
 
@@ -508,29 +465,27 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
         [dict writeToFile:@"/jb/offsets.plist" atomically:YES];
         PWN_LOG("wrote offsets.plist");
-        
+
         chown("/jb/offsets.plist", 0, 0);
         chmod("/jb/offsets.plist", 0644);
     }
 
-	{
-		if (opt & JBOPT_POST_ONLY) {
-			// spawing a bin to get amfid up
-			execprog("/bin/bash",NULL);
-		}
-	}
+    {
+        if (opt & JBOPT_POST_ONLY) {
+            // spawing a bin to get amfid up
+            execprog("/bin/bash", NULL);
+        }
+    }
 
     {
-        if (access("/Library/Substrate", F_OK) == 0)
-        {
+        if (access("/Library/Substrate", F_OK) == 0) {
             // move to old directory
-            NSString *newPath = [NSString stringWithFormat:@"/Library/Substrate.%lu", (unsigned long)time(NULL)];
+            NSString* newPath = [NSString stringWithFormat:@"/Library/Substrate.%lu", (unsigned long)time(NULL)];
             PWN_LOG("moving /Library/Substrate to new path: %@", newPath);
 
             [fileMgr moveItemAtPath:@"/Library/Substrate" toPath:newPath error:nil];
 
-            if (access("/Library/Substrate", F_OK) == 0)
-            {
+            if (access("/Library/Substrate", F_OK) == 0) {
                 PWN_LOG("failed to move /Library/Substrate!!");
                 ret = KERN_FAILURE;
                 goto out;
@@ -539,32 +494,27 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
         mkdir("/Library/Substrate", 1755);
 
-        if (access("/usr/libexec/substrate", F_OK) == 0)
-        {
+        if (access("/usr/libexec/substrate", F_OK) == 0) {
             inject_trust("/usr/libexec/substrate");
 
             ret = execprog("/usr/libexec/substrate", NULL);
             PWN_LOG("substrate ret: %d", ret);
-        }
-        else if (opt & JBOPT_POST_ONLY)
-        {
+        } else if (opt & JBOPT_POST_ONLY) {
             PWN_LOG("JBOPT_POST_ONLY and substrate was not found! something has gone horribly wrong");
             ret = KERN_FAILURE;
             goto out;
-        }
-        else 
-        {
+        } else {
             PWN_LOG("substrate was not found, why was it not installed?!?!");
             ret = KERN_FAILURE;
             goto out;
         }
 
-        /* 
+        /*
          * if substrate fails to launch we're in trouble
-         * we also need to be checking it's installed 
-         * before attempting to launch it 
+         * we also need to be checking it's installed
+         * before attempting to launch it
          * -- remember; it handles codesign patching
-         */ 
+         */
     }
 
     updateStage(20);
@@ -574,43 +524,32 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
         MACH(inject_trust("/bin/launchctl"));
 
         // start launchdaemons
-        ret = execprog("/bin/launchctl", (const char **)&(const char *[])
-        {
-            "/bin/launchctl",
-            "load",
-            "-w",
-            "/Library/LaunchDaemons",
-            NULL
-        });
-        if (ret != 0)
-        {
+        ret = execprog("/bin/launchctl", (const char**)&(const char*[]) { "/bin/launchctl", "load", "-w", "/Library/LaunchDaemons", NULL });
+        if (ret != 0) {
             PWN_LOG("failed to start launchdaemons: %d", ret);
         }
         PWN_LOG("started launchdaemons: %d", ret);
 
         // run rc.d scripts
-        if (access("/etc/rc.d", F_OK) == 0)
-        {
+        if (access("/etc/rc.d", F_OK) == 0) {
             // "No reason not to use it until it's removed" - sbingner, 12-11-2018
-            typedef int (*system_t)(const char *command);
+            typedef int (*system_t)(const char* command);
             system_t sys = dlsym(RTLD_DEFAULT, "system");
-            
-            NSArray *files = [fileMgr contentsOfDirectoryAtPath:@"/etc/rc.d" error:nil];
-            
-            for (NSString *file in files)
-            {
-                NSString *fullPath = [NSString stringWithFormat:@"/etc/rc.d/%@", file];
+
+            NSArray* files = [fileMgr contentsOfDirectoryAtPath:@"/etc/rc.d" error:nil];
+
+            for (NSString* file in files) {
+                NSString* fullPath = [NSString stringWithFormat:@"/etc/rc.d/%@", file];
 
                 // ignore substrate
                 if ([fullPath isEqualToString:@"/etc/rc.d/substrate"] ||
-                    [fullPath isEqualToString:@"/etc/rc.d/substrated"])
-                {
+                    [fullPath isEqualToString:@"/etc/rc.d/substrated"]) {
                     PWN_LOG("ignoring substrate...");
                     continue;
                 }
 
                 ret = sys([fullPath UTF8String]);
-                
+
                 // poor man's WEIEXITSTATUS
                 PWN_LOG("ret on %s: %d\n", [fullPath UTF8String], (ret >> 8) & 0xff);
             }
@@ -620,8 +559,7 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
     updateStage(21);
 
     {
-        if ((opt & JBOPT_POST_ONLY) != 0)
-        {
+        if ((opt & JBOPT_POST_ONLY) != 0) {
             PWN_LOG("finished post exploitation");
 
             // Removed because the double boot check should make it safe
@@ -645,33 +583,30 @@ kern_return_t jailbreak(uint32_t opt, void* controller, void (*sendLog)(void*, N
 
             /* hope substrate is running by this point? */
 
-            if (access("/usr/bin/ldrestart", F_OK) != 0)
-            {
+            if (access("/usr/bin/ldrestart", F_OK) != 0) {
                 PWN_LOG("failed to find ldrestart?!");
                 ret = KERN_FAILURE;
                 goto out;
             }
 
             ret = execprog("/usr/bin/ldrestart", NULL);
-            if (ret != 0)
-            {
+            if (ret != 0) {
                 PWN_LOG("failed to execute ldrestart: %d", ret);
                 ret = KERN_FAILURE;
                 goto out;
             }
         }
     }
-    
+
     ret = KERN_SUCCESS;
 
 out:
-	LOG("Restoring to mobile and exiting.");
+    LOG("Restoring to mobile and exiting.");
     restore_to_mobile();
 
     term_kexecute();
 
-    if (MACH_PORT_VALID(kernel_task))
-    {
+    if (MACH_PORT_VALID(kernel_task)) {
         mach_port_deallocate(self, kernel_task);
     }
 
